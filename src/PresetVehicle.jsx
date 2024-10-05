@@ -1,8 +1,8 @@
 export const PRESET_THOUZER = {
   type: "THOUZER",
   image: "./THOUZER.png",
-  scale: 0.1, // 元画像サイズに合わせた比率
-  offset: 500, // 元画像に合わせた位置調整
+  scale: 0.8, // 元画像サイズに合わせた比率調整
+  offset: 450, // 元画像に合わせた位置調整
   size: {
     width: 1011,
     length: 901,
@@ -14,5 +14,20 @@ export const PRESET_THOUZER = {
   },
 };
 
+export const PRESET_CARRIRO = {
+  type: "CARRIRO",
+  image: "./Image/CarriRo.png",
+  scale: 0.69, // 元画像サイズに合わせた比率調整
+  offset: 520, // 元画像に合わせた位置調整
+  size: {
+    width: 606,
+    length: 906,
+    tread: 515,
+    towpos: -200,
+    rearend: -166,
+    linkpos: 0,
+    camerapos: 551,
+  },
+};
+
 export const ImageVehicle = new Image();
-ImageVehicle.src = PRESET_THOUZER.image;

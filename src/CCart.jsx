@@ -1,24 +1,36 @@
+import {
+  Point,
+  DegToRad,
+  Translate,
+  Rotate,
+  WorldToClientPosition,
+  WorldToClientPositionX,
+  WorldToClientPositionY,
+} from "./CoordinateFunctions";
+
 //カートクラス
 export class CCart {
-  constructor(width, length, tread, drivingpos, linkpos, towpos, rearend, camerapos, id) {
-    this.Width = width;
-    this.Length = length;
-    this.Tread = tread; // 駆動輪のトレッド幅
-    this._DrivingPos = drivingpos; // 固定輪中心位置
-    this._LinkPos = linkpos; // Rigid台車連結位置
-    this._TowPos = towpos; // Towing台車連結位置
-    this._RearEnd = rearend;
-    this._CameraPos = camerapos;
+  constructor(vehicle, id) {
+    this.Width = parseInt(vehicle.width);
+    this.Length = parseInt(vehicle.length);
+    this.Tread = parseInt(vehicle.tread); // 駆動輪のトレッド幅
+    this._DrivingPos = vehicle.drivingpos; // 固定輪中心位置
+    this._LinkPos = vehicle.linkpos; // Rigid台車連結位置
+    this._TowPos = vehicle.towpos; // Towing台車連結位置
+    this._RearEnd = parseInt(vehicle.rearend);
+    this._CameraPos = vehicle.camerapos;
     this.Id = id;
 
-    this.IsTowingCart = rearend + length < 0; // 牽引バーの有無確認
+    this.IsTowingCart = parseInt(vehicle.rearend) + parseInt(vehicle.length) < 0; // 牽引バーの有無確認
   }
 
   // カートの位置角度から、ワールド座標系におけるカート形状を計算
-  Calc(worldPos, degree) {
+  Calc(worldPos, degree, scale, offset) {
     this.Position = worldPos; //被牽引連結位置　※基準（ワールド座標における機体の位置）
     this.Degree = degree; //ワールド座標における機体の角度
     this.Radian = DegToRad(degree);
+    this.Scale = scale;
+    this.Offset = offset;
 
     this.DrivingPos = Translate(Rotate(this._DrivingPos, this.Radian), this.Position);
     this.LinkPos = Translate(Rotate(this._LinkPos, this.Radian), this.Position);
@@ -61,10 +73,22 @@ export class CCart {
       ctx.strokeStyle = "rgb(0,0,0)";
       ctx.setLineDash([15, 10]);
       ctx.beginPath();
-      ctx.moveTo(WorldToClientPositionX(this.LeftRear.x), WorldToClientPositionY(this.LeftRear.y));
-      ctx.lineTo(WorldToClientPositionX(this.RightRear.x), WorldToClientPositionY(this.RightRear.y));
-      ctx.lineTo(WorldToClientPositionX(this.RightFront.x), WorldToClientPositionY(this.RightFront.y));
-      ctx.lineTo(WorldToClientPositionX(this.LeftFront.x), WorldToClientPositionY(this.LeftFront.y));
+      ctx.moveTo(
+        WorldToClientPositionX(this.LeftRear.x, this.Scale, this.Offset),
+        WorldToClientPositionY(this.LeftRear.y, this.Scale, this.Offset)
+      );
+      ctx.lineTo(
+        WorldToClientPositionX(this.RightRear.x, this.Scale, this.Offset),
+        WorldToClientPositionY(this.RightRear.y, this.Scale, this.Offset)
+      );
+      ctx.lineTo(
+        WorldToClientPositionX(this.RightFront.x, this.Scale, this.Offset),
+        WorldToClientPositionY(this.RightFront.y, this.Scale, this.Offset)
+      );
+      ctx.lineTo(
+        WorldToClientPositionX(this.LeftFront.x, this.Scale, this.Offset),
+        WorldToClientPositionY(this.LeftFront.y, this.Scale, this.Offset)
+      );
       ctx.closePath();
       ctx.stroke();
       ctx.restore();

@@ -1,47 +1,40 @@
 export const canvasSimulate = {
-  // position: "absolute",
-  // top: 120,
-  // left: 525,
   lineHeight: "32px",
-  // borderRadius: 6,
-  border: "0px solid #888",
-  padding: "0px 0px",
-  color: "#333",
-  background: "#ffffff",
-};
-
-export const canvasCart = {
-  // position: "absolute",
-  // top: 120,
-  // left: 525,
-  lineHeight: "32px",
-  borderRadius: 6,
-  // border: "1px solid #000000",
   padding: "0px 0px",
   color: "#333",
   background: "transparent",
-};
-
-export const canvasCourse = {
-  // position: "absolute",
-  // top: 120,
-  // left: 525,
-  lineHeight: "32px",
-  borderRadius: 6,
-  // border: "1px solid #000000",
-  padding: "0px 0px",
-  color: "#333",
-  background: "transparent",
+  margin:0,
 };
 
 export const canvasGrid = {
-  // position: "absolute",
-  // top: 120,
-  // left: 525,
   lineHeight: "32px",
-  borderRadius: 6,
-  // border: "1px solid #000000",
   padding: "0px 0px",
   color: "#333",
-  background: "#f0f0f0",
+  background: "#ffffff",
+  margin: 0,
+};
+
+export const inputNumber = {
+  size: "small",
+  width: 100,
+};
+
+export const inputLabel = {
+  width: 50,
+  size: "small",
+};
+
+export const divBlock = {
+  display: "grid",
+  gridTtemplateRows: "1fr",
+  gridTemplateColumns: "1fr",
+  margin: 0,
+  padding:0,
+};
+
+export const divBlockChild = {
+  gridRow: "1/2",
+  gridColumn: "1/2",
+  margin: 0,
+  padding: 0,
 };

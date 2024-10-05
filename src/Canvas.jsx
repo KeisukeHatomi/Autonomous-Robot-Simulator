@@ -1,16 +1,28 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as Styles from "./Styles";
-import { Authenticator, Flex, Button, TextAreaField, Divider, Grid, Card, Tabs } from "@aws-amplify/ui-react";
+import {
+  Authenticator,
+  Flex,
+  Button,
+  TextAreaField,
+  Divider,
+  Grid,
+  Card,
+  Tabs,
+  Input,
+  Label,
+  Image,
+  CheckboxField,
+} from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { PRESET_THOUZER, ImageVehicle } from "./PresetVehicle";
-import * as P2D from "./CoordinateFunctions";
-import { Point } from "./CoordinateFunctions";
+import { Point, WorldToClientPosition, WorldToClientScale } from "./CoordinateFunctions";
 import { AUTOSTART, OPERATION } from "./OperationPatern";
 import { CCart } from "./CCart";
 import { CLandMark } from "./CLandmark";
 import { CCourse } from "./CCourse";
 
-const DEBUG = false;
+const DEBUG = true;
 const DEFAULT_SCALE = 0.1;
 
 function Canvas({ command, client }) {
@@ -25,8 +37,32 @@ function Canvas({ command, client }) {
   const speed = useRef(1);
   const offset = useRef(Point.Zero());
   const scale = useRef(DEFAULT_SCALE);
+  const VehicleStartPosition = useRef(Point.Zero());
+  const VehicleStartDegree = useRef(0.0);
+  const vehicle = useRef();
+  const id = useRef(0);
+  const cbTrace = useRef(false);
+  const cbVisVehicle = useRef(false);
+  const IsCartSelecting = useRef(false);
+  const IsCartMovingMode = useRef(false);
 
-  const context = {
+  // 機体生成
+  const [vehicleProp, setVehicle] = useState({
+    width: 606,
+    length: 906,
+    rearend: -166,
+    towpos: new Point(-200, 0),
+    drivingpos: Point.Zero(),
+    linkpos: Point.Zero(),
+    camerapos: new Point(551, 0),
+    tread: 515,
+  });
+
+  const contextCart = {
+    canvas: "",
+    ctx: "",
+  };
+  const contextGrid = {
     canvas: "",
     ctx: "",
   };
@@ -35,86 +71,86 @@ function Canvas({ command, client }) {
     y = 300;
 
   // 線の描画イベント
-  const drawCart = (x, y) => {
-    if (x > context.canvas.width - 40) directionX.current = -1;
-    if (y > context.canvas.height - 40) directionY.current = -1;
-    if (x < 40) directionX.current = 1;
-    if (y < 40) directionY.current = 1;
+  // const drawCart = (x, y) => {
+  //   if (x > context.canvas.width - 40) directionX.current = -1;
+  //   if (y > context.canvas.height - 40) directionY.current = -1;
+  //   if (x < 40) directionX.current = 1;
+  //   if (y < 40) directionY.current = 1;
 
-    // context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
-    context.ctx.save();
-    context.ctx.scale(PRESET_THOUZER.scale, PRESET_THOUZER.scale);
-    context.ctx.translate(-PRESET_THOUZER.offset, -PRESET_THOUZER.offset);
-    context.ctx.drawImage(
-      ImageVehicle,
-      x / PRESET_THOUZER.scale,
-      y / PRESET_THOUZER.scale,
-      ImageVehicle.width,
-      ImageVehicle.height
-    );
-    context.ctx.restore();
-  };
+  //   // context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
+  //   context.ctx.save();
+  //   context.ctx.scale(PRESET_THOUZER.scale, PRESET_THOUZER.scale);
+  //   context.ctx.translate(-PRESET_THOUZER.offset, -PRESET_THOUZER.offset);
+  //   context.ctx.drawImage(
+  //     ImageVehicle,
+  //     x / PRESET_THOUZER.scale,
+  //     y / PRESET_THOUZER.scale,
+  //     ImageVehicle.width,
+  //     ImageVehicle.height
+  //   );
+  //   context.ctx.restore();
+  // };
 
   /**
    * Gridキャンパスに5m,1mグリッドを描画
    */
   const drawGrid = () => {
-    context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    clearCanvas();
 
     // 1m間隔グリッド
-    context.ctx.lineWidth = "1";
-    context.ctx.strokeStyle = "rgb(225,225,225)";
-    for (let x = 0; x < context.canvas.width + offset.current.x; x += 1000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(x - offset.current.x, 0);
-      context.ctx.lineTo(x - offset.current.x, context.canvas.height);
-      context.ctx.stroke();
+    contextGrid.ctx.lineWidth = "1";
+    contextGrid.ctx.strokeStyle = "rgb(225,225,225)";
+    for (let x = 0; x < contextGrid.canvas.width + offset.current.x; x += 1000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(x - offset.current.x, 0);
+      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
+      contextGrid.ctx.stroke();
     }
-    for (let y = 0; y < context.canvas.height + offset.current.y; y += 1000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(0, y - offset.current.y);
-      context.ctx.lineTo(context.canvas.width, y - offset.current.y);
-      context.ctx.stroke();
+    for (let y = 0; y < contextGrid.canvas.height + offset.current.y; y += 1000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(0, y - offset.current.y);
+      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
+      contextGrid.ctx.stroke();
     }
-    for (let x = 0; x > -context.canvas.width + offset.current.x; x -= 1000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(x - offset.current.x, 0);
-      context.ctx.lineTo(x - offset.currentx, context.canvas.height);
-      context.ctx.stroke();
+    for (let x = 0; x > -contextGrid.canvas.width + offset.current.x; x -= 1000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(x - offset.current.x, 0);
+      contextGrid.ctx.lineTo(x - offset.currentx, contextGrid.canvas.height);
+      contextGrid.ctx.stroke();
     }
-    for (let y = 0; y > -context.canvas.height + offset.current.y; y -= 1000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(0, y - offset.current.y);
-      context.ctx.lineTo(context.canvas.width, y - offset.current.y);
-      context.ctx.stroke();
+    for (let y = 0; y > -contextGrid.canvas.height + offset.current.y; y -= 1000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(0, y - offset.current.y);
+      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
+      contextGrid.ctx.stroke();
     }
 
     // 5m間隔グリッド
-    context.ctx.lineWidth = "1";
-    context.ctx.strokeStyle = "rgb(192,192,192)";
-    for (let x = 0; x < context.canvas.width + offset.current.x; x += 5000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(x - offset.current.x, 0);
-      context.ctx.lineTo(x - offset.current.x, context.canvas.height);
-      context.ctx.stroke();
+    contextGrid.ctx.lineWidth = "1";
+    contextGrid.ctx.strokeStyle = "rgb(192,192,192)";
+    for (let x = 0; x < contextGrid.canvas.width + offset.current.x; x += 5000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(x - offset.current.x, 0);
+      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
+      contextGrid.ctx.stroke();
     }
-    for (let y = 0; y < context.canvas.height + offset.current.y; y += 5000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(0, y - offset.current.y);
-      context.ctx.lineTo(context.canvas.width, y - offset.current.y);
-      context.ctx.stroke();
+    for (let y = 0; y < contextGrid.canvas.height + offset.current.y; y += 5000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(0, y - offset.current.y);
+      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
+      contextGrid.ctx.stroke();
     }
-    for (let x = 0; x > -context.canvas.width + offset.current.x; x -= 5000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(x - offset.current.x, 0);
-      context.ctx.lineTo(x - offset.current.x, context.canvas.height);
-      context.ctx.stroke();
+    for (let x = 0; x > -contextGrid.canvas.width + offset.current.x; x -= 5000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(x - offset.current.x, 0);
+      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
+      contextGrid.ctx.stroke();
     }
-    for (let y = 0; y > -context.canvas.height + offset.current.y; y -= 5000 * scale.current) {
-      context.ctx.beginPath();
-      context.ctx.moveTo(0, y - offset.current.y);
-      context.ctx.lineTo(context.canvas.width, y - offset.current.y);
-      context.ctx.stroke();
+    for (let y = 0; y > -contextGrid.canvas.height + offset.current.y; y -= 5000 * scale.current) {
+      contextGrid.ctx.beginPath();
+      contextGrid.ctx.moveTo(0, y - offset.current.y);
+      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
+      contextGrid.ctx.stroke();
     }
   };
 
@@ -145,10 +181,10 @@ function Canvas({ command, client }) {
    */
   const getCoordinate = (event) => {
     if (event.type == "mousedown" || event.type == "mousemove") {
-      context.ctx.prevX = context.ctx.currX;
-      context.ctx.prevY = context.ctx.currY;
-      context.ctx.currX = event.clientX - context.ctx.canvas.offsetLeft;
-      context.ctx.currY = event.clientY - context.ctx.canvas.offsetTop;
+      contextCart.ctx.prevX = contextCart.ctx.currX;
+      contextCart.ctx.prevY = contextCart.ctx.currY;
+      contextCart.ctx.currX = event.clientX - contextCart.ctx.canvas.offsetLeft;
+      contextCart.ctx.currY = event.clientY - contextCart.ctx.canvas.offsetTop;
     }
 
     if (event.type == "mousedown") {
@@ -156,10 +192,10 @@ function Canvas({ command, client }) {
     }
 
     if (event.type == "mouseup" || event.type == "mouseout") {
-      context.ctx.drawFlag = false;
+      contextCart.ctx.drawFlag = false;
     }
 
-    if (event.type == "mousemove" && context.ctx.drawFlag) {
+    if (event.type == "mousemove" && contextCart.ctx.drawFlag) {
       drawCart(x, y);
     }
   };
@@ -189,9 +225,9 @@ function Canvas({ command, client }) {
         OnCourseLayoutButtonClick();
       }
       if (IsCartMovingMode) {
-        CVehicle.Calc(prevCartPos, prevCartDeg);
-        IsCartMovingMode = false;
-        IsCartSelecting = false;
+        CCart.Calc(prevCartPos, prevCartDeg);
+        IsCartMovingMode.current = false;
+        IsCartSelecting.current = false;
       }
     }
 
@@ -240,25 +276,149 @@ function Canvas({ command, client }) {
     UpdateCourseTextData();
   }
 
-  const resizeFitCanvas = () => {
-    const val = document.getElementById("canvasAreaCard");
-    context.canvas.width = val.clientWidth;
-    context.canvas.height = val.clientHeight;
+  const fitCanvas = () => {
+    if (!exec.current) {
+      const val = document.getElementById("canvasAreaCard");
+      contextCart.canvas.width = val.clientWidth;
+      contextCart.canvas.height = val.clientHeight;
+      contextGrid.canvas.width = val.clientWidth;
+      contextGrid.canvas.height = val.clientHeight;
+    }
+  };
+
+  const clearCanvas = () => {
+    contextCart.ctx.clearRect(0, 0, contextCart.canvas.width, contextCart.canvas.height);
+  };
+
+  const DrawImageVehicle = (ctx, image, wp, rad, scl, offs) => {
+    // クライアント座標へ変換
+    const p = WorldToClientPosition(wp, scale.current, offset.current);
+    // コンテキストを保存する
+    ctx.save();
+    const imgScale = scale.current / scl;
+    const cx = image.width - offs;
+    const cy = image.height / 2;
+    // イメージを座標移動する
+    ctx.translate(p.x, p.y);
+    ctx.scale(imgScale, imgScale);
+    ctx.rotate(rad);
+
+    ctx.shadowColor = "gray";
+    ctx.shadowBlur = 10;
+    if (IsCartSelecting.current && IsCartMovingMode.current) {
+      ctx.shadowOffsetX = 15;
+      ctx.shadowOffsetY = 15;
+    } else {
+      ctx.shadowOffsetX = 5;
+      ctx.shadowOffsetY = 5;
+    }
+    // イメージ原点をFixedPosへシフトして描画
+    ctx.drawImage(image, -cx, -cy, image.width, image.height);
+    // コンテキストを元に戻す
+    ctx.restore();
+  };
+
+  const DrawCart = (cobj, color, width, ctx) => {
+    ctx.beginPath();
+    const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+    const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
+    const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
+    const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
+    const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
+    const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
+    ctx.moveTo(lf.x, lf.y);
+    ctx.lineTo(rf.x, rf.y);
+    ctx.lineTo(rr.x, rr.y);
+    ctx.lineTo(lr.x, lr.y);
+    ctx.closePath();
+
+    if (cobj.IsTowingCart) {
+      // 牽引バーがある場合
+      ctx.moveTo(lp.x, lp.y);
+      ctx.lineTo(fp.x, fp.y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    const p1 = WorldToClientPosition(cobj.TowPos, scale.current, offset.current);
+    ctx.arc(p1.x, p1.y, WorldToClientScale(20, scale.current), 0, Math.PI * 2, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    const p2 = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+    ctx.arc(p2.x, p2.y, WorldToClientScale(20, scale.current), 0, Math.PI * 2, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    const p3 = WorldToClientPosition(cobj.DrivingPos, scale.current, offset.current);
+    ctx.arc(p3.x, p3.y, WorldToClientScale(10, scale.current), 0, Math.PI * 2, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    const p4 = WorldToClientPosition(cobj.CameraPos, scale.current, offset.current);
+    ctx.arc(p4.x, p4.y, WorldToClientScale(50, scale.current), 0, Math.PI * 2, true);
+    ctx.stroke();
+  };
+
+  const drawAllCarts = () => {
+    if (!cbTrace.current) clearCanvas();
+
+    if (cbVisVehicle.current) {
+      DrawImageVehicle(
+        contextCart.ctx,
+        ImageVehicle,
+        vehicle.current.Position,
+        -vehicle.current.Radian,
+        PRESET_THOUZER.scale,
+        PRESET_THOUZER.offset
+      );
+    } else {
+      DrawCart(vehicle.current, "rgb(128,32,32)", "1", contextCart.ctx);
+    }
+  };
+
+  const initDraw = () => {
+    clearCanvas();
+    offset.current = Point.Zero();
+
+    vehicle.current = new CCart(vehicleProp, id.current);
+    vehicle.current.Calc(VehicleStartPosition.current, VehicleStartDegree.current, scale.current, offset.current);
+
+    drawGrid();
+    drawAllCarts();
   };
 
   useEffect(() => {
     document.body.style.overflow = "hidden"; //ブラウザのスクロールバーを表示させない
 
-    context.canvas = document.getElementById("simulateCanvas");
-    context.ctx = context.canvas.getContext("2d");
+    contextCart.canvas = document.getElementById("simulateCanvas");
+    contextCart.ctx = contextCart.canvas.getContext("2d");
+    contextGrid.canvas = document.getElementById("gridCanvas");
+    contextGrid.ctx = contextGrid.canvas.getContext("2d");
 
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("keyup", onKeyUp);
+    // document.addEventListener("keydown", onKeyDown);
+    // document.addEventListener("keyup", onKeyUp);
 
-    window.addEventListener("resize", resizeFitCanvas);
+    window.onresize = fitCanvas;
 
-    resizeFitCanvas();
+    fitCanvas();
 
+    VehicleStartPosition.current = Point.Zero();
+    VehicleStartDegree.current = 0.0;
+
+    ImageVehicle.src = PRESET_THOUZER.image;
+
+    initDraw();
   });
 
   /**
@@ -302,6 +462,30 @@ function Canvas({ command, client }) {
     }
   }, [command]);
 
+  const handleInputVehiclePropNum = (e) => {
+    const { name, value } = e.currentTarget;
+    setVehicle((prevVehicle) => ({
+      ...prevVehicle,
+      [name]: value,
+    }));
+  };
+
+  const handleInputVehiclePropPoint = (e) => {
+    const { name, value } = e.currentTarget;
+    setVehicle((prevVehicle) => ({
+      ...prevVehicle,
+      [name]: new Point(value, 0),
+    }));
+  };
+
+  const handleTrace = () => {
+    cbTrace.current = !cbTrace.current;
+  };
+  const handleVisVehicle = () => {
+    cbVisVehicle.current = !cbVisVehicle.current;
+    if (!exec.current) drawAllCarts(); //全カート描画
+  };
+
   return (
     <Grid
       height="98%"
@@ -313,7 +497,7 @@ function Canvas({ command, client }) {
       templateRows="60px 1fr 60px"
     >
       <Card columnStart="1" columnEnd="-1">
-        <h3>MQTT Driving Simulator</h3>
+        <h3>Autonomous Robot Simulator</h3>
       </Card>
       <Card rowStart="2" rowEnd="-1">
         <Tabs
@@ -333,8 +517,15 @@ function Canvas({ command, client }) {
                       Stop
                     </Button>
                   </Flex>
+
+                  <CheckboxField
+                    label="走行軌跡表示"
+                    name="cb_trace"
+                    defaultChecked={cbTrace.current}
+                    onChange={handleTrace}
+                  />
                   <label>
-                    Command
+                    MQTT Receive Command
                     <TextAreaField name="postContent" rows={1} cols={40} value={operate} />
                   </label>
                 </Flex>
@@ -345,9 +536,86 @@ function Canvas({ command, client }) {
               value: "2",
               content: (
                 <>
-                  <p>Content of the second tab.</p>
+                  <p>機体仕様</p>
+                  <Flex direction="row" gap="small">
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Wt</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="width"
+                        defaultValue={vehicleProp.width}
+                        onInput={(e) => handleInputVehiclePropNum(e)}
+                      ></Input>
+                    </Flex>
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Lt</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="length"
+                        defaultValue={vehicleProp.length}
+                        onInput={(e) => handleInputVehiclePropNum(e)}
+                      ></Input>
+                    </Flex>
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Td</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="tread"
+                        defaultValue={vehicleProp.tread}
+                        onInput={(e) => handleInputVehiclePropNum(e)}
+                      ></Input>
+                    </Flex>
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Re</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="rearend"
+                        defaultValue={vehicleProp.rearend}
+                        onInput={(e) => handleInputVehiclePropNum(e)}
+                      ></Input>
+                    </Flex>
+                  </Flex>
+                  <Flex direction="row" gap="small">
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Tw</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="towpos"
+                        defaultValue={vehicleProp.towpos.x}
+                        onInput={(e) => handleInputVehiclePropPoint(e)}
+                      ></Input>
+                    </Flex>
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Lk</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="linkpos"
+                        defaultValue={vehicleProp.linkpos.x}
+                        onInput={(e) => handleInputVehiclePropPoint(e)}
+                      ></Input>
+                    </Flex>
+                    <Flex direction="column" gap="small">
+                      <Label {...Styles.inputLabel}>Cm</Label>
+                      <Input
+                        {...Styles.inputNumber}
+                        name="camerapos"
+                        defaultValue={vehicleProp.camerapos.x}
+                        onInput={(e) => handleInputVehiclePropPoint(e)}
+                      ></Input>
+                    </Flex>
+                  </Flex>
+                  <Image src="./CarriRoSize.png"></Image>
+                  <CheckboxField
+                    label="機体をイメージで表示"
+                    name="cb_vis_vehicle"
+                    defaultChecked={cbVisVehicle.current}
+                    onChange={handleVisVehicle}
+                  />
                   <Button isFullWidth onClick={() => setTab("1")}>
                     Back to Simulate tab
+                  </Button>
+                  <Button isFullWidth onClick={() => console.log(vehicleProp)}>
+                    show log
                   </Button>
                 </>
               ),
@@ -391,13 +659,15 @@ function Canvas({ command, client }) {
           ]}
         />
       </Card>
-      <Card id="canvasAreaCard" columnStart="2" columnEnd="-1" padding="0">
-        <Flex>
-          <canvas id="simulateCanvas" style={Styles.canvasSimulate}></canvas>
-          {/* <canvas id="canvasGrid" width="100%" height="100%" style={Styles.canvasGrid}></canvas> */}
-          {/* <canvas id="canvasCourse" width="100%" height="100%" style={Styles.canvasCourse}></canvas> */}
-          {/* <canvas id="canvasCart" width="100%" height="100%" style={Styles.canvasCart}></canvas> */}
-        </Flex>
+      <Card id="canvasAreaCard" columnStart="2" columnEnd="-1" padding="0" margin="0">
+        <div style={Styles.divBlock}>
+          <div style={Styles.divBlockChild}>
+            <canvas id="gridCanvas" style={Styles.canvasGrid}></canvas>
+          </div>
+          <div style={Styles.divBlockChild}>
+            <canvas id="simulateCanvas" style={Styles.canvasSimulate}></canvas>
+          </div>
+        </div>
       </Card>
       <Card columnStart="2" columnEnd="-1">
         Footer
