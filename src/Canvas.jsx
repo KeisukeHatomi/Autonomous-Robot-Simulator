@@ -16,7 +16,13 @@ import {
 } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { PRESET_THOUZER, ImageVehicle } from "./PresetVehicle";
-import { Point, WorldToClientPosition, WorldToClientScale } from "./CoordinateFunctions";
+import {
+  Point,
+  WorldToClientPosition,
+  WorldToClientScale,
+  ClientToWorldPosition,
+  PointToDistance,
+} from "./CoordinateFunctions";
 import { AUTOSTART, OPERATION } from "./OperationPatern";
 import { CCart } from "./CCart";
 import { CLandMark } from "./CLandmark";
@@ -43,8 +49,30 @@ function Canvas({ command, client }) {
   const id = useRef(0);
   const cbTrace = useRef(false);
   const cbVisVehicle = useRef(false);
+  const cbScroll = useRef(false);
   const IsCartSelecting = useRef(false);
   const IsCartMovingMode = useRef(false);
+  const onCanvasPos = useRef(Point.Zero());
+  const IsMarkLayoutMode = useRef(false);
+  const IsMarkSelecting = useRef(false);
+  const IsCourseLayoutMode = useRef(false);
+  const IsCourseSelecting = useRef(false);
+  const measuring = useRef(false);
+  const msDownS = useRef(Point.Zero());
+  const msDownSL = useRef(Point.Zero());
+  const msDownE = useRef(Point.Zero());
+  const msdown = useRef(false);
+  const msdownL = useRef(false);
+  const prevMousePoint = useRef(Point.Zero());
+  const IsCourseReLayoutMode = useRef(false);
+  const markPos = useRef(Point.Zero());
+  const markAngle = useRef(0.0);
+  const cartPos = useRef(Point.Zero());
+  const prevCartPos = useRef(Point.Zero());
+  const prevCartDeg = useRef(0.0);
+  const cartDegree = useRef(0.0);
+  const keyPressEsc = useRef(false);
+  const CartSelectingId = useRef(-1);
 
   // 機体生成
   const [vehicleProp, setVehicle] = useState({
@@ -58,11 +86,15 @@ function Canvas({ command, client }) {
     tread: 515,
   });
 
-  const contextCart = {
+  const canvasCart = {
     canvas: "",
     ctx: "",
   };
-  const contextGrid = {
+  const canvasGrid = {
+    canvas: "",
+    ctx: "",
+  };
+  const canvasCourse = {
     canvas: "",
     ctx: "",
   };
@@ -95,64 +127,70 @@ function Canvas({ command, client }) {
    * Gridキャンパスに5m,1mグリッドを描画
    */
   const drawGrid = () => {
-    clearCanvas();
+    clearCanvas(canvasGrid);
 
     // 1m間隔グリッド
-    contextGrid.ctx.lineWidth = "1";
-    contextGrid.ctx.strokeStyle = "rgb(225,225,225)";
-    for (let x = 0; x < contextGrid.canvas.width + offset.current.x; x += 1000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(x - offset.current.x, 0);
-      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
-      contextGrid.ctx.stroke();
+    canvasGrid.ctx.lineWidth = "1";
+    canvasGrid.ctx.strokeStyle = "rgb(225,225,225)";
+    for (let x = 0; x < canvasGrid.canvas.width + offset.current.x; x += 1000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(x - offset.current.x, 0);
+      canvasGrid.ctx.lineTo(x - offset.current.x, canvasGrid.canvas.height);
+      canvasGrid.ctx.stroke();
     }
-    for (let y = 0; y < contextGrid.canvas.height + offset.current.y; y += 1000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(0, y - offset.current.y);
-      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
-      contextGrid.ctx.stroke();
+    for (let y = 0; y < canvasGrid.canvas.height + offset.current.y; y += 1000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(0, y - offset.current.y);
+      canvasGrid.ctx.lineTo(canvasGrid.canvas.width, y - offset.current.y);
+      canvasGrid.ctx.stroke();
     }
-    for (let x = 0; x > -contextGrid.canvas.width + offset.current.x; x -= 1000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(x - offset.current.x, 0);
-      contextGrid.ctx.lineTo(x - offset.currentx, contextGrid.canvas.height);
-      contextGrid.ctx.stroke();
+    for (let x = 0; x > -canvasGrid.canvas.width + offset.current.x; x -= 1000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(x - offset.current.x, 0);
+      canvasGrid.ctx.lineTo(x - offset.current.x, canvasGrid.canvas.height);
+      canvasGrid.ctx.stroke();
     }
-    for (let y = 0; y > -contextGrid.canvas.height + offset.current.y; y -= 1000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(0, y - offset.current.y);
-      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
-      contextGrid.ctx.stroke();
+    for (let y = 0; y > -canvasGrid.canvas.height + offset.current.y; y -= 1000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(0, y - offset.current.y);
+      canvasGrid.ctx.lineTo(canvasGrid.canvas.width, y - offset.current.y);
+      canvasGrid.ctx.stroke();
     }
 
     // 5m間隔グリッド
-    contextGrid.ctx.lineWidth = "1";
-    contextGrid.ctx.strokeStyle = "rgb(192,192,192)";
-    for (let x = 0; x < contextGrid.canvas.width + offset.current.x; x += 5000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(x - offset.current.x, 0);
-      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
-      contextGrid.ctx.stroke();
+    canvasGrid.ctx.lineWidth = "1";
+    canvasGrid.ctx.strokeStyle = "rgb(192,192,192)";
+    for (let x = 0; x < canvasGrid.canvas.width + offset.current.x; x += 5000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(x - offset.current.x, 0);
+      canvasGrid.ctx.lineTo(x - offset.current.x, canvasGrid.canvas.height);
+      canvasGrid.ctx.stroke();
     }
-    for (let y = 0; y < contextGrid.canvas.height + offset.current.y; y += 5000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(0, y - offset.current.y);
-      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
-      contextGrid.ctx.stroke();
+    for (let y = 0; y < canvasGrid.canvas.height + offset.current.y; y += 5000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(0, y - offset.current.y);
+      canvasGrid.ctx.lineTo(canvasGrid.canvas.width, y - offset.current.y);
+      canvasGrid.ctx.stroke();
     }
-    for (let x = 0; x > -contextGrid.canvas.width + offset.current.x; x -= 5000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(x - offset.current.x, 0);
-      contextGrid.ctx.lineTo(x - offset.current.x, contextGrid.canvas.height);
-      contextGrid.ctx.stroke();
+    for (let x = 0; x > -canvasGrid.canvas.width + offset.current.x; x -= 5000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(x - offset.current.x, 0);
+      canvasGrid.ctx.lineTo(x - offset.current.x, canvasGrid.canvas.height);
+      canvasGrid.ctx.stroke();
     }
-    for (let y = 0; y > -contextGrid.canvas.height + offset.current.y; y -= 5000 * scale.current) {
-      contextGrid.ctx.beginPath();
-      contextGrid.ctx.moveTo(0, y - offset.current.y);
-      contextGrid.ctx.lineTo(contextGrid.canvas.width, y - offset.current.y);
-      contextGrid.ctx.stroke();
+    for (let y = 0; y > -canvasGrid.canvas.height + offset.current.y; y -= 5000 * scale.current) {
+      canvasGrid.ctx.beginPath();
+      canvasGrid.ctx.moveTo(0, y - offset.current.y);
+      canvasGrid.ctx.lineTo(canvasGrid.canvas.width, y - offset.current.y);
+      canvasGrid.ctx.stroke();
     }
   };
+
+  const drawCourse = () => {
+    clearCanvas(canvasCourse);
+  };
+
+  const updateCourseTextData = () => {};
 
   const simulate = () => {
     drawGrid();
@@ -172,31 +210,6 @@ function Canvas({ command, client }) {
     if (exec.current) {
       clearInterval(intervalId.current);
       exec.current = false;
-    }
-  };
-
-  /**
-   * マウスイベントの座標を取得及びイベント毎による処理を振り分ける
-   * @param {*} event
-   */
-  const getCoordinate = (event) => {
-    if (event.type == "mousedown" || event.type == "mousemove") {
-      contextCart.ctx.prevX = contextCart.ctx.currX;
-      contextCart.ctx.prevY = contextCart.ctx.currY;
-      contextCart.ctx.currX = event.clientX - contextCart.ctx.canvas.offsetLeft;
-      contextCart.ctx.currY = event.clientY - contextCart.ctx.canvas.offsetTop;
-    }
-
-    if (event.type == "mousedown") {
-      drawCart(x, y);
-    }
-
-    if (event.type == "mouseup" || event.type == "mouseout") {
-      contextCart.ctx.drawFlag = false;
-    }
-
-    if (event.type == "mousemove" && contextCart.ctx.drawFlag) {
-      drawCart(x, y);
     }
   };
 
@@ -278,16 +291,19 @@ function Canvas({ command, client }) {
 
   const fitCanvas = () => {
     if (!exec.current) {
-      const val = document.getElementById("canvasAreaCard");
-      contextCart.canvas.width = val.clientWidth;
-      contextCart.canvas.height = val.clientHeight;
-      contextGrid.canvas.width = val.clientWidth;
-      contextGrid.canvas.height = val.clientHeight;
+      const { clientWidth, clientHeight } = document.getElementById("canvasAreaCard");
+      canvasCart.canvas.width = clientWidth;
+      canvasCart.canvas.height = clientHeight - 8; // 8pxほど高さを小さくしないと合わない。。
+      canvasCourse.canvas.width = clientWidth;
+      canvasCourse.canvas.height = clientHeight - 8;
+      canvasGrid.canvas.width = clientWidth;
+      canvasGrid.canvas.height = clientHeight - 8;
+      return { clientWidth, clientHeight };
     }
   };
 
-  const clearCanvas = () => {
-    contextCart.ctx.clearRect(0, 0, contextCart.canvas.width, contextCart.canvas.height);
+  const clearCanvas = (canvas) => {
+    canvas.ctx.clearRect(0, 0, canvas.canvas.width, canvas.canvas.height);
   };
 
   const DrawImageVehicle = (ctx, image, wp, rad, scl, offs) => {
@@ -371,11 +387,11 @@ function Canvas({ command, client }) {
   };
 
   const drawAllCarts = () => {
-    if (!cbTrace.current) clearCanvas();
+    if (!cbTrace.current) clearCanvas(canvasCart);
 
     if (cbVisVehicle.current) {
       DrawImageVehicle(
-        contextCart.ctx,
+        canvasCart.ctx,
         ImageVehicle,
         vehicle.current.Position,
         -vehicle.current.Radian,
@@ -383,12 +399,14 @@ function Canvas({ command, client }) {
         PRESET_THOUZER.offset
       );
     } else {
-      DrawCart(vehicle.current, "rgb(128,32,32)", "1", contextCart.ctx);
+      DrawCart(vehicle.current, "rgb(128,32,32)", "1", canvasCart.ctx);
     }
   };
 
   const initDraw = () => {
-    clearCanvas();
+    clearCanvas(canvasCart);
+    clearCanvas(canvasCourse);
+    clearCanvas(canvasGrid);
     offset.current = Point.Zero();
 
     vehicle.current = new CCart(vehicleProp, id.current);
@@ -399,19 +417,22 @@ function Canvas({ command, client }) {
   };
 
   useEffect(() => {
-    document.body.style.overflow = "hidden"; //ブラウザのスクロールバーを表示させない
+    // document.body.style.overflow = "hidden"; //ブラウザのスクロールバーを表示させない
 
-    contextCart.canvas = document.getElementById("simulateCanvas");
-    contextCart.ctx = contextCart.canvas.getContext("2d");
-    contextGrid.canvas = document.getElementById("gridCanvas");
-    contextGrid.ctx = contextGrid.canvas.getContext("2d");
+    canvasCart.canvas = document.getElementById("cartCanvas");
+    canvasCart.ctx = canvasCart.canvas.getContext("2d");
+    canvasGrid.canvas = document.getElementById("gridCanvas");
+    canvasGrid.ctx = canvasGrid.canvas.getContext("2d");
+    canvasCourse.canvas = document.getElementById("courseCanvas");
+    canvasCourse.ctx = canvasCourse.canvas.getContext("2d");
 
     // document.addEventListener("keydown", onKeyDown);
     // document.addEventListener("keyup", onKeyUp);
 
     window.onresize = fitCanvas;
 
-    fitCanvas();
+    const val = fitCanvas();
+    // console.log("canvasHeight🔵 ", val);
 
     VehicleStartPosition.current = Point.Zero();
     VehicleStartDegree.current = 0.0;
@@ -486,10 +507,206 @@ function Canvas({ command, client }) {
     if (!exec.current) drawAllCarts(); //全カート描画
   };
 
+  const handleScroll = () => {
+    cbScroll.current = !cbScroll.current;
+  };
+
+  const handleMouseDown = (e) => {
+    // The left button was pressed
+    if (e.button == 0) {
+      const rect = canvasCart.canvas.getBoundingClientRect();
+      onCanvasPos.current = new Point(e.clientX - rect.x, e.clientY - rect.y);
+      const mspos = ClientToWorldPosition(onCanvasPos.current, scale.current, offset.current);
+
+      // 二点間距離測定
+      if (e.altKey && !IsMarkLayoutMode.current && !IsCourseLayoutMode.current) {
+        if (measuring.current) {
+          msDownE.current = mspos;
+          measuring.current = false;
+          alert(
+            "始点座標  " +
+              "x= " +
+              msDownS.current.x.toFixed(0) +
+              ", y= " +
+              msDownS.current.y.toFixed(0) +
+              "\n" +
+              "終点座標  " +
+              "x= " +
+              msDownE.current.x.toFixed(0) +
+              ", y= " +
+              msDownE.current.y.toFixed(0) +
+              "\n" +
+              "二点間距離 " +
+              "d= " +
+              PointToDistance(msDownE.current, msDownS.current).toFixed(0) +
+              " [mm]"
+          );
+          canvasCourse.ctx.clearRect(0, 0, canvasCart.width, canvasCart.height);
+          msdownL.current = false;
+        } else {
+          msDownS.current = mspos;
+          measuring.current = true;
+          msDownSL.current = onCanvasPos.current;
+          msdownL.current = true;
+        }
+      } else {
+        msdown.current = true;
+        msDownS.current = onCanvasPos.current;
+        offset.current = prevMousePoint.current;
+        measuring.current = false;
+        msdownL.current = false;
+      }
+
+      if (IsMarkLayoutMode.current && !e.shiftKey) {
+      }
+
+      if (IsCourseLayoutMode.current && !IsCourseReLayoutMode.current && !e.shiftKey) {
+      }
+
+      if (IsCourseReLayoutMode.current && !e.shiftKey) {
+      }
+
+      if (IsCartMovingMode.current && !e.shiftKey) {
+        IsCartMovingMode.current = false;
+        IsCartSelecting.current = false;
+        drawAllCarts();
+      }
+
+      drawCourse();
+      updateCourseTextData();
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    msdown.current = false;
+    prevMousePoint.current = offset.current;
+
+    // The left button was pressed
+    if (e.button == 0) {
+      if (!IsMarkLayoutMode.current && IsMarkSelecting.current && !e.shiftKey) {
+      }
+      if (!IsCourseLayoutMode.current && IsCourseSelecting.current && !e.shiftKey) {
+      }
+      if (!IsCartMovingMode.current && IsCartSelecting.current && !e.shiftKey) {
+        const mspos = ClientToWorldPosition(onCanvasPos.current);
+        cartPos.current = new Point(Math.round(mspos.x / 100) * 100, Math.round(mspos.y / 100) * 100);
+        prevCartPos.current = vehicle.current.Position;
+        prevCartDeg.current = vehicle.current.Degree;
+        cartPos.current = vehicle.current.Position;
+        cartDegree.current = vehicle.current.Degree;
+        IsCartMovingMode.current = true;
+        IsCartSelecting.current = true;
+
+        DrawAllCarts(); // 全カート描画
+      }
+    }
+    updateCourseTextData();
+  };
+
+  const handleMouseMove = (e) => {
+    const rect = canvasCart.canvas.getBoundingClientRect();
+    onCanvasPos.current = new Point(e.clientX - rect.x, e.clientY - rect.y);
+    const mspos = ClientToWorldPosition(onCanvasPos.current, scale.current, offset.current);
+
+    if (e.shiftKey) {
+      if (!cbTrace.current.checked && !cbScroll.current.checked) {
+        if (msdown.current) {
+          const pt = msDownS.current.SubPoint(onCanvasPos.current);
+          offset.current = prevMousePoint.current.AddPoint(pt);
+        }
+      }
+    }
+
+    drawGrid();
+    if (!exec.current) {
+      drawAllCarts();
+    }
+    drawCourse();
+
+    if (IsMarkLayoutMode.current && !keyPressEsc.current) {
+    }
+    if (!IsMarkLayoutMode.current && !e.shiftKey) {
+    }
+    if (IsCourseLayoutMode.current && !keyPressEsc.current) {
+    }
+    if (!IsCourseLayoutMode.current && !e.shiftKey) {
+    }
+
+    if (!IsCartMovingMode.current && !e.shiftKey) {
+      IsCartSelecting.current = false;
+      CartSelectingId.current = -1;
+      if (vehicle.current.Selecting(canvasCart.ctx, mspos)) {
+        CartSelectingId.current = vehicle.current.Id;
+        IsCartSelecting.current = true;
+      }
+    }
+
+    if (IsCartMovingMode.current && !e.shiftKey) {
+      if (e.altKey) {
+        cartPos.current = mspos;
+      } else {
+        cartPos.current = new Point(Math.round(mspos.x / 100) * 100, Math.round(mspos.y / 100) * 100);
+      }
+      // Cart位置再計算
+      CartPosition(cartPos.current, cartDegree.current);
+      VehicleStartPosition.current = cartPos.current;
+      VehicleStartDegree.current = cartDegree.current;
+    }
+
+    if (e.shiftKey) {
+      if (msdown.current && cbTrace.current.checked) {
+        canvasCourse.ctx.font = "12pt Arial";
+        canvasCourse.ctx.fillStyle = "rgb(96,96,128)";
+        canvasCourse.ctx.fillText(
+          "軌跡表示中は画面移動できません。",
+          e.clientX + 5 - canvasCart.canvas.offsetLeft,
+          e.clientY + 30
+        );
+      }
+      if (msdown.current && cbScroll.current.checked) {
+        canvasCourse.ctx.font = "12pt Arial";
+        canvasCourse.ctx.fillStyle = "rgb(96,96,128)";
+        canvasCourse.ctx.fillText(
+          "スクロール中は画面移動できません。",
+          e.clientX + 5 - canvasCart.canvas.offsetLeft,
+          e.clientY + 30
+        );
+      }
+    }
+    if (e.altKey) {
+      canvasCourse.ctx.font = "12pt Arial";
+      canvasCourse.ctx.fillStyle = "rgb(96,96,128)";
+      canvasCourse.ctx.fillText(
+        "(" + mspos.x.toFixed(0) + "," + mspos.y.toFixed(0) + ")",
+        e.clientX + 10 - canvasCourse.canvas.offsetLeft,
+        e.clientY + 30 - canvasCourse.canvas.offsetTop
+      );
+      // マウスの位置が右側、下側になったとき、表示文字がクライアント域からはみ出さないよう調整したほうが良い
+    }
+
+    if (e.altKey && measuring.current) {
+      if (msdownL.current) {
+        canvasCourse.ctx.beginPath();
+        canvasCourse.ctx.moveTo(msDownSL.current.x, msDownSL.current.y);
+        canvasCourse.ctx.lineTo(onCanvasPos.current.x, onCanvasPos.current.y);
+        canvasCourse.ctx.strokeStyle = "rgb(96,96,255)";
+        canvasCourse.ctx.lineWidth = "1";
+        canvasCourse.ctx.stroke();
+      }
+    } else {
+      msdownL.current = false;
+      measuring.current = false;
+    }
+
+    updateCourseTextData();
+  };
+
+  const handleMouseWheel = (e) => {};
+
   return (
     <Grid
-      height="98%"
-      margin="10px"
+      height="100%"
+      padding="10px"
       id="gridArea"
       columnGap="0.5rem"
       rowGap="0.5rem"
@@ -523,6 +740,12 @@ function Canvas({ command, client }) {
                     name="cb_trace"
                     defaultChecked={cbTrace.current}
                     onChange={handleTrace}
+                  />
+                  <CheckboxField
+                    label="機体中央表示"
+                    name="cb_scroll"
+                    defaultChecked={cbScroll.current}
+                    onChange={handleScroll}
                   />
                   <label>
                     MQTT Receive Command
@@ -659,14 +882,23 @@ function Canvas({ command, client }) {
           ]}
         />
       </Card>
-      <Card id="canvasAreaCard" columnStart="2" columnEnd="-1" padding="0" margin="0">
-        <div style={Styles.divBlock}>
-          <div style={Styles.divBlockChild}>
-            <canvas id="gridCanvas" style={Styles.canvasGrid}></canvas>
-          </div>
-          <div style={Styles.divBlockChild}>
-            <canvas id="simulateCanvas" style={Styles.canvasSimulate}></canvas>
-          </div>
+      <Card id="canvasAreaCard" columnStart="2" columnEnd="-1" style={Styles.divBlock} margin="0" padding="0">
+        <div style={Styles.divBlockChild}>
+          <canvas id="gridCanvas" style={Styles.grid}></canvas>
+        </div>
+        <div style={Styles.divBlockChild}>
+          <canvas id="courseCanvas" style={Styles.course}></canvas>
+        </div>
+        <div style={Styles.divBlockChild}>
+          <canvas
+            id="cartCanvas"
+            style={Styles.cart}
+            onMouseDown={(e) => handleMouseDown(e)}
+            onMouseUp={(e) => handleMouseUp(e)}
+            onMouseMove={(e) => handleMouseMove(e)}
+            onWheel={(e) => handleMouseWheel(e)}
+            onMouseLeave={(e) => handleMouseUp(e)}
+          ></canvas>
         </div>
       </Card>
       <Card columnStart="2" columnEnd="-1">
