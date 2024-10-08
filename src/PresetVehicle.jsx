@@ -1,3 +1,5 @@
+import { Point } from "./CoordinateFunctions";
+
 export const PRESET_THOUZER = {
   type: "THOUZER",
   image: "./THOUZER.png",
@@ -23,10 +25,11 @@ export const PRESET_CARRIRO = {
     width: 606,
     length: 906,
     tread: 515,
-    towpos: -200,
+    towpos: new Point(-200, 0),
+    drivingpos: Point.Zero(),
     rearend: -166,
-    linkpos: 0,
-    camerapos: 551,
+    linkpos: Point.Zero(),
+    camerapos: new Point(551, 0),
   },
 };
 

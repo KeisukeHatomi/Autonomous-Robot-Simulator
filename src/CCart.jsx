@@ -20,7 +20,6 @@ export class CCart {
     this._RearEnd = parseInt(vehicle.rearend);
     this._CameraPos = vehicle.camerapos;
     this.Id = id;
-
     this.IsTowingCart = parseInt(vehicle.rearend) + parseInt(vehicle.length) < 0; // 牽引バーの有無確認
   }
 
