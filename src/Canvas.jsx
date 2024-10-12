@@ -35,6 +35,8 @@ import { AUTOSTART, OPERATION } from "./OperationPatern";
 import {
 	Point,
 	WorldToClientPosition,
+	WorldToClientPositionX,
+	WorldToClientPositionY,
 	WorldToClientScale,
 	ClientToWorldPosition,
 	PointToDistance,
@@ -138,6 +140,7 @@ function Canvas({ command, client }) {
 	const coursePosies = useRef([])
 	const msdownWS = useRef(0)
 	const prevCoursePosies = useRef([])
+	const CourseType = useRef(0);
 
 	const [exclusiveValue, setExclusiveValue] = useState("");
 	// 走行機体プリセット
@@ -169,8 +172,9 @@ function Canvas({ command, client }) {
 	 */
 	const initDraw = () => {
 		clearCanvas(canvasCart.current);
-		clearCanvas(canvasCourse.current);
-		clearCanvas(canvasGrid.current);
+
+		offset.current = Point.Zero();
+		drawGrid();
 
 		id.current = 0;
 		// 走行機体生成
@@ -219,9 +223,10 @@ function Canvas({ command, client }) {
 			VehicleStartPosition.current.y * scale.current -
 			canvasCart.current.canvas.height / 2;
 		prevMousePoint.current = offset.current;
-
+		
 		drawGrid();
 		drawAllCarts();
+		drawCourse(); // コース描画
 	};
 
 	/**
@@ -355,38 +360,21 @@ function Canvas({ command, client }) {
 	 */
 	const DrawCart = (cobj, color, width, ctx) => {
 		ctx.beginPath();
-		const lp = WorldToClientPosition(
-			cobj.Position,
-			scale.current,
-			offset.current
-		);
-		const fp = WorldToClientPosition(
-			cobj.FrontPos,
-			scale.current,
-			offset.current
-		);
-		const lf = WorldToClientPosition(
-			cobj.LeftFront,
-			scale.current,
-			offset.current
-		);
-		const rf = WorldToClientPosition(
-			cobj.RightFront,
-			scale.current,
-			offset.current
-		);
-		const rr = WorldToClientPosition(
-			cobj.RightRear,
-			scale.current,
-			offset.current
-		);
-		const lr = WorldToClientPosition(
-			cobj.LeftRear,
-			scale.current,
-			offset.current
-		);
+		const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+		const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
+		const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
+		const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
+		const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
+		const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
 
-		createRoundRectPath(ctx, lr.x, lr.y, lf.x - lr.x, rr.y - lr.y, 5);
+		// createRoundRectPath(ctx, lr.x, lr.y, lf.x - lr.x, rr.y - lr.y, 5);
+		// この関数で、角Rにしたいが、回転を考慮しないとダメ
+
+		ctx.moveTo(lf.x, lf.y);
+		ctx.lineTo(rf.x, rf.y);
+		ctx.lineTo(rr.x, rr.y);
+		ctx.lineTo(lr.x, lr.y);
+		ctx.closePath();
 
 		if (cobj.IsTowingCart) {
 			// 牽引バーがある場合
@@ -400,73 +388,29 @@ function Canvas({ command, client }) {
 		ctx.beginPath();
 		ctx.strokeStyle = color;
 		ctx.lineWidth = width;
-		const p1 = WorldToClientPosition(
-			cobj.TowPos,
-			scale.current,
-			offset.current
-		);
-		ctx.arc(
-			p1.x,
-			p1.y,
-			WorldToClientScale(20, scale.current),
-			0,
-			Math.PI * 2,
-			true
-		);
+		const p1 = WorldToClientPosition(cobj.TowPos, scale.current, offset.current);
+		ctx.arc(p1.x, p1.y, WorldToClientScale(20, scale.current), 0, Math.PI * 2, true);
 		ctx.stroke();
 
 		ctx.beginPath();
 		ctx.strokeStyle = color;
 		ctx.lineWidth = width;
-		const p2 = WorldToClientPosition(
-			cobj.Position,
-			scale.current,
-			offset.current
-		);
-		ctx.arc(
-			p2.x,
-			p2.y,
-			WorldToClientScale(20, scale.current),
-			0,
-			Math.PI * 2,
-			true
-		);
+		const p2 = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+		ctx.arc(p2.x, p2.y, WorldToClientScale(20, scale.current), 0, Math.PI * 2, true);
 		ctx.stroke();
 
 		ctx.beginPath();
 		ctx.strokeStyle = color;
 		ctx.lineWidth = width;
-		const p3 = WorldToClientPosition(
-			cobj.DrivingPos,
-			scale.current,
-			offset.current
-		);
-		ctx.arc(
-			p3.x,
-			p3.y,
-			WorldToClientScale(10, scale.current),
-			0,
-			Math.PI * 2,
-			true
-		);
+		const p3 = WorldToClientPosition(cobj.DrivingPos, scale.current, offset.current);
+		ctx.arc(p3.x, p3.y, WorldToClientScale(10, scale.current), 0, Math.PI * 2, true);
 		ctx.stroke();
 
 		ctx.beginPath();
 		ctx.strokeStyle = color;
 		ctx.lineWidth = width;
-		const p4 = WorldToClientPosition(
-			cobj.CameraPos,
-			scale.current,
-			offset.current
-		);
-		ctx.arc(
-			p4.x,
-			p4.y,
-			WorldToClientScale(50, scale.current),
-			0,
-			Math.PI * 2,
-			true
-		);
+		const p4 = WorldToClientPosition(cobj.CameraPos, scale.current, offset.current);
+		ctx.arc(p4.x, p4.y, WorldToClientScale(50, scale.current), 0, Math.PI * 2, true);
 		ctx.stroke();
 	};
 
@@ -673,9 +617,9 @@ function Canvas({ command, client }) {
 			}
 			if (ope[i][1] == -1) {
 				// 速度が-1の時は、直前の直進速度を適用
-				DriveTime.push((ope[i][0] / prevSpeed) * 1000);
-				DriveLeftSpeed.current.push(prevSpeed);
-				DriveRightSpeed.current.push(prevSpeed);
+				DriveTime.current.push((ope[i][0] / prevSpeed.current) * 1000);
+				DriveLeftSpeed.current.push(prevSpeed.current);
+				DriveRightSpeed.current.push(prevSpeed.current);
 			}
 
 			if (ope[i][0] == 0 && ope[i][3] > 0) {
@@ -1104,8 +1048,36 @@ function Canvas({ command, client }) {
 		}
 	};
 
-	const handleClickCourseLayout = () => {
+	const handleClickCourseLayout = (e) => {
+		IsCourseLayoutMode.current = !IsCourseLayoutMode.current;
 
+		if (IsCourseLayoutMode.current) {
+			msdownWS.current = 0;
+			coursePosies.current = [];
+			coursePosies.current.push(coursePos.current);
+			CourseLayout.current.push(new CCourse(CourseType.current, coursePosies.current, false));
+			CourseSelectingId.current = CourseLayout.current.length - 1;
+			CoursePosiesSelectingId.current = coursePosies.current.length - 1;
+
+			document.body.style.cursor = "pointer";
+		} else {
+			msdownWS.current = 2;
+			if (!CourseLayout.current[CourseSelectingId.current].Fix && !IsCourseReLayoutMode.current) {
+				CourseLayout.current[CourseSelectingId.current].Position.pop();
+				CourseLayout.current[CourseSelectingId.current].Fix = true;
+			}
+
+			if (!CourseLayout.current[CourseSelectingId.current].Fix && IsCourseReLayoutMode.current) {
+				CourseLayout.current[CourseSelectingId.current].Fix = true;
+				CourseLayout.current[CourseSelectingId.current].Position = prevCoursePosies.current.concat();
+				IsCourseReLayoutMode.current = false;
+			}
+
+			document.body.style.cursor = "auto";
+		}
+
+		updateCourseTextData();
+		drawCourse(); // コース再描画
 	}
 
 	const handleInputVehiclePropNum = (e) => {
@@ -1415,7 +1387,7 @@ function Canvas({ command, client }) {
 		// The left button was pressed
 		if (e.button == 0) {
 			if (!IsMarkLayoutMode.current && IsMarkSelecting.current && !e.shiftKey) {
-				let mspos = ClientToWorldPosition(onCanvasPos.current,scale.current, offset.current);
+				let mspos = ClientToWorldPosition(onCanvasPos.current, scale.current, offset.current);
 				markPos.current = new Point(Math.round(mspos.x / 100) * 100, Math.round(mspos.y / 100) * 100);
 				markAngle.current = LandMarkLayout.current[MarkSelectingId.current].Angle;
 				LandMarkLayout.current[MarkSelectingId.current].Fix = false;
@@ -1499,8 +1471,10 @@ function Canvas({ command, client }) {
 			canvasCourse.current.ctx.font = "12pt Arial";
 			canvasCourse.current.ctx.fillStyle = "rgb(96,96,128)";
 			canvasCourse.current.ctx.fillText(
-				"(" + (markPos.current.x / 1000).toFixed(2) + "m, " + (markPos.current.y / 1000).toFixed(2) + "m) " + markAngle.current + "°",
-				e.clientX + 5 - canvasCart.current.offsetLeft,
+				"(" + (markPos.current.x / 1000).toFixed(2) + "m, " +
+				(markPos.current.y / 1000).toFixed(2) + "m) " +
+				markAngle.current + "°",
+				e.clientX + 5 - canvasCart.current.canvas.offsetLeft,
 				e.clientY + 30
 			);
 		}
@@ -1509,7 +1483,7 @@ function Canvas({ command, client }) {
 			MarkSelectingId.current = -1;
 			let i = 0;
 			LandMarkLayout.current.forEach((element) => {
-				if (element.Selecting(canvasCourse.current.ctx, mspos,scale.current, offset.current)) {
+				if (element.Selecting(canvasCourse.current.ctx, mspos, scale.current, offset.current)) {
 					IsMarkSelecting.current = true;
 					MarkSelectingId.current = i;
 				}
@@ -1531,9 +1505,9 @@ function Canvas({ command, client }) {
 			canvasCourse.current.ctx.setLineDash([2, 2]);
 			canvasCourse.current.ctx.beginPath();
 			canvasCourse.current.ctx.arc(
-				WorldToClientPositionX(coursePos.current.x),
-				WorldToClientPositionY(coursePos.current.y),
-				WorldToClientScale(100),
+				WorldToClientPositionX(coursePos.current.x,scale.current, offset.current),
+				WorldToClientPositionY(coursePos.current.y,scale.current, offset.current),
+				WorldToClientScale(100,scale.current, offset.current),
 				0,
 				2 * Math.PI,
 				true
@@ -1556,7 +1530,7 @@ function Canvas({ command, client }) {
 			CourseElementSelectingId.current = -1;
 			let i = 0;
 			CourseLayout.current.forEach((element) => {
-				let res = element.Selecting(contextCourse, mspos,scale.current, offset.current);
+				let res = element.Selecting(canvasCourse.current.ctx, mspos, scale.current, offset.current);
 				if (res.ResultP) {
 					IsCourseSelecting.current = true;
 					CourseSelectingId.current = i;
@@ -1647,7 +1621,116 @@ function Canvas({ command, client }) {
 		updateCourseTextData();
 	};
 
-	const handleMouseWheel = (e) => { };
+	const handleMouseWheel = (e) => {
+		// e.preventDefault();
+		// 次のエラーが出るため、回避策を要検討
+		// Unable to preventDefault inside passive event listener invocation.
+
+		let rect = canvasCart.current.canvas.getBoundingClientRect();
+		onCanvasPos.current = new Point(e.clientX - rect.x, e.clientY - rect.y);
+		let mspos = ClientToWorldPosition(onCanvasPos.current, scale.current, offset.current);
+
+		let nscale = 1.0;
+		let scl = Number(scale.current);
+
+		if (e.shiftKey) {
+			if (!cbTrace.current) {
+				if (e.deltaY > 0) {
+					nscale = 0.95;
+				} else {
+					nscale = 1.05;
+				}
+				scl *= nscale;
+
+				let flimit = false;
+				if (scl < 0.005) flimit = true;
+				if (scl > 1.0) flimit = true;
+
+				if (!flimit) {
+					scale.current = scl;
+					let tx = (onCanvasPos.current.x + offset.current.x) * (nscale - 1.0);
+					let ty = (onCanvasPos.current.y + offset.current.y) * (nscale - 1.0);
+					offset.current.x += tx;
+					offset.current.y += ty;
+				}
+				prevMousePoint.current = offset.current;
+			}
+		}
+		//グリッド再描画
+		drawGrid();
+		if (!exec.current) {
+			//全オブジェクト描画
+			drawAllCarts();
+		}
+		// 壁描画
+		drawCourse();
+
+		if (IsMarkLayoutMode.current && !keyPressEsc.current) {
+			if (!e.shiftKey) {
+				let da = 0;
+				if (e.altKey) {
+					da = 1;
+				} else {
+					da = 15;
+				}
+				if (e.deltaY > 0) {
+					markAngle.current += da;
+				} else {
+					markAngle.current -= da;
+				}
+				if (0 > markAngle.current) markAngle.current += 360;
+				if (markAngle.current >= 360) markAngle.current -= 360;
+			}
+			markPos.current = new Point(Math.round(mspos.x / 100) * 100, Math.round(mspos.y / 100) * 100);
+			// 壁描画
+			drawCourse();
+
+			canvasCourse.current.ctx.font = "12pt Arial";
+			canvasCourse.current.ctx.fillStyle = "rgb(96,96,128)";
+			canvasCourse.current.ctx.fillText(
+				"(" + (mspos.x / 1000).toFixed(1) + "m, " +
+				(mspos.y / 1000).toFixed(1) + "m) " +
+				markAngle.current + "°",
+				e.clientX + 5 - canvasCart.current.canvas.offsetLeft,
+				e.clientY + 30
+			);
+		}
+		if (IsCartMovingMode.current && !keyPressEsc.current) {
+			if (!e.shiftKey) {
+				let da = 0;
+				if (e.altKey) {
+					da = 1;
+				} else {
+					da = 15;
+				}
+				if (e.deltaY > 0) {
+					cartDegree.current += da;
+				} else {
+					cartDegree.current -= da;
+				}
+				if (0 > cartDegree.current) cartDegree.current += 360;
+				if (cartDegree.current >= 360) cartDegree.current -= 360;
+
+				// Cart位置再計算
+				CartPosition(cartPos.current, cartDegree.current);
+				VehicleStartPosition.current = cartPos.current;
+				VehicleStartDegree.current = cartDegree.current;
+
+				drawAllCarts();
+			}
+		}
+
+		if (e.shiftKey) {
+			if (cbTrace.current) {
+				canvasCourse.current.ctx.font = "12pt Arial";
+				canvasCourse.current.ctx.fillStyle = "rgb(96,96,128)";
+				canvasCourse.current.ctx.fillText("軌跡表示中は画面拡縮できません。",
+					e.clientX + 5 - canvasCart.current.offsetLeft, e.clientY + 30);
+			}
+		}
+
+		updateCourseTextData();
+	};
 
 	return (
 		<Grid
@@ -2048,6 +2131,24 @@ function Canvas({ command, client }) {
 												</ToggleButton>
 												<ToggleButton value="Curve_Right">
 													<Image src="./LandMark_Curve_Right.gif" />
+												</ToggleButton>
+											</ToggleButtonGroup>
+										</Flex>
+									</Fieldset>
+									<Fieldset
+										legend="Layout wall"
+										direction="column"
+										marginBottom={20}
+									>
+										<Flex direction="row" gap="small">
+											<ToggleButtonGroup
+												size="small"
+												value={exclusiveValue}
+												isExclusive
+												onChange={(e) => handleClickCourseLayout(e)}
+											>
+												<ToggleButton value="wall">
+													wall
 												</ToggleButton>
 											</ToggleButtonGroup>
 										</Flex>

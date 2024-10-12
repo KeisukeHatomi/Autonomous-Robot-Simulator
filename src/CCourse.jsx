@@ -1,3 +1,12 @@
+import {
+  Translate,
+  PointToAngle,
+  Rotate,
+  WorldToClientPositionX,
+  WorldToClientPositionY,
+  WorldToClientScale,
+} from './CoordinateFunctions'
+
 // コースクラス
 export class CCourse {
   constructor(type, pos, fix) {
@@ -46,7 +55,7 @@ export class CCourse {
     return res;
   }
 
-  Selecting(ctx, pos) {
+  Selecting(ctx, pos, scale, offset) {
     let res = this.IsPointOnCourse(pos);
     let val = {
       ResultP: false,
@@ -61,9 +70,9 @@ export class CCourse {
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
       ctx.arc(
-        WorldToClientPositionX(this.Position[res.Id].x),
-        WorldToClientPositionY(this.Position[res.Id].y),
-        WorldToClientScale(100),
+        WorldToClientPositionX(this.Position[res.Id].x, scale, offset),
+        WorldToClientPositionY(this.Position[res.Id].y, scale, offset),
+        WorldToClientScale(100, scale, offset),
         0,
         2 * Math.PI,
         true
