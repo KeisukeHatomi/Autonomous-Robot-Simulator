@@ -18,7 +18,8 @@ export const grid = {
 
 export const inputNumber = {
   size: "small",
-  width: 100,
+  width: 68,
+  // textAlign: "right",
 };
 
 export const inputLabel = {

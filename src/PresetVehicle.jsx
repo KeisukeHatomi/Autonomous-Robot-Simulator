@@ -6,13 +6,14 @@ export const PRESET_THOUZER = {
   scale: 0.8, // 元画像サイズに合わせた比率調整
   offset: 450, // 元画像に合わせた位置調整
   size: {
-    width: 1011,
-    length: 901,
-    tread: 244,
-    towpos: -40,
-    rearend: -210,
-    linkpos: -40,
-    camerapos: 0,
+    width: 606,
+    length: 906,
+    tread: 515,
+    towpos: new Point(-200, 0),
+    drivingpos: Point.Zero(),
+    rearend: -166,
+    linkpos: Point.Zero(),
+    camerapos: new Point(551, 0),
   },
 };
 
