@@ -65,7 +65,7 @@ export class CCart {
       return false;
     }
   }
-  Selecting(ctx, pos) {
+  Selecting(ctx, pos, scale, offset) {
     if (this.IsPointOnCart(pos)) {
       ctx.save();
       ctx.lineWidth = "5";
@@ -73,20 +73,20 @@ export class CCart {
       ctx.setLineDash([15, 10]);
       ctx.beginPath();
       ctx.moveTo(
-        WorldToClientPositionX(this.LeftRear.x, this.Scale, this.Offset),
-        WorldToClientPositionY(this.LeftRear.y, this.Scale, this.Offset)
+        WorldToClientPositionX(this.LeftRear.x, scale, offset),
+        WorldToClientPositionY(this.LeftRear.y, scale, offset)
       );
       ctx.lineTo(
-        WorldToClientPositionX(this.RightRear.x, this.Scale, this.Offset),
-        WorldToClientPositionY(this.RightRear.y, this.Scale, this.Offset)
+        WorldToClientPositionX(this.RightRear.x, scale, offset),
+        WorldToClientPositionY(this.RightRear.y, scale, offset)
       );
       ctx.lineTo(
-        WorldToClientPositionX(this.RightFront.x, this.Scale, this.Offset),
-        WorldToClientPositionY(this.RightFront.y, this.Scale, this.Offset)
+        WorldToClientPositionX(this.RightFront.x, scale, offset),
+        WorldToClientPositionY(this.RightFront.y, scale, offset)
       );
       ctx.lineTo(
-        WorldToClientPositionX(this.LeftFront.x, this.Scale, this.Offset),
-        WorldToClientPositionY(this.LeftFront.y, this.Scale, this.Offset)
+        WorldToClientPositionX(this.LeftFront.x, scale, offset),
+        WorldToClientPositionY(this.LeftFront.y, scale, offset)
       );
       ctx.closePath();
       ctx.stroke();

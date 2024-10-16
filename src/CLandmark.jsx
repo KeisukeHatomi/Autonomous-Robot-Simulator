@@ -19,8 +19,8 @@ export class CLandMark {
 		this.Fix = fix;
 
 		// ランドマークの認識範囲
-		this.width = 1000;
-		this.height = 100;
+		this.width = 400;
+		this.height = 400;
 
 		this.CalcRectangle();
 	}
@@ -43,7 +43,7 @@ export class CLandMark {
 		let _tp = Translate(pos, this.Position.MulValue(-1));
 		let npos = Rotate(_tp, DegToRad(-this.Angle));
 
-		if (-this.width / 2 < npos.x && npos.x < this.width / 2 && -this.height / 2 < npos.y && npos.y < this.height / 2) {
+		if (-this.width / 2 < npos.x && npos.x < this.width / 2 && -this.height / 2 < npos.y && npos.y < 0) {
 			return true;
 		} else {
 			return false;
@@ -59,7 +59,7 @@ export class CLandMark {
 			ctx.strokeStyle = "rgb(0,0,0)";
 			ctx.setLineDash([5, 5]);
 			ctx.beginPath();
-			ctx.moveTo(WorldToClientPositionX(this.lefttop.x,scale,offset), WorldToClientPositionY(this.lefttop.y,scale,offset));
+			ctx.moveTo(WorldToClientPositionX(this.lefttop.x, scale, offset), WorldToClientPositionY(this.lefttop.y, scale, offset));
 			ctx.lineTo(WorldToClientPositionX(this.righttop.x, scale, offset), WorldToClientPositionY(this.righttop.y, scale, offset));
 			ctx.lineTo(WorldToClientPositionX(this.rightbottom.x, scale, offset), WorldToClientPositionY(this.rightbottom.y, scale, offset));
 			ctx.lineTo(WorldToClientPositionX(this.leftbottom.x, scale, offset), WorldToClientPositionY(this.leftbottom.y, scale, offset));

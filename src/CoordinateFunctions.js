@@ -101,8 +101,8 @@ export function WorldToClientPosition(wp, scale, offset) {
   let cpy = WorldToClientPositionY(wp.y, scale, offset);
   return new Point(cpx, cpy);
 }
-export function WorldToClientScale(scl, scale) {
-  return scl * scale;
+export function WorldToClientScale(value, scale) {
+  return value * scale;
 }
 
 //クライアント座標 → ワールド座標変換

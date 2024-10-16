@@ -55,7 +55,7 @@ const DEBUG = true;
 function Canvas({ command, client }) {
 	const DEFAULT_SCALE = 0.1;
 	const CR = "\n";
-	const LANDMARK_IMAGE_SCALE = 0.595; // 元画像サイズに合わせた比率
+	const LANDMARK_IMAGE_SCALE = 0.5; // 元画像サイズに合わせた比率
 	const START_TIME = 0.0; //シミュレーション開始時刻[sec]
 	const TIME_SPAN = 10; //シミュレーション時間間隔[msec]
 
@@ -142,9 +142,10 @@ function Canvas({ command, client }) {
 	const prevCoursePosies = useRef([])
 	const CourseType = useRef(0);
 
-	const [exclusiveValue, setExclusiveValue] = useState("");
+	const [exclusiveMarkValue, setExclusiveMarkValue] = useState("");
+	const [exclusiveCourseValue, setExclusiveCourseValue] = useState("");
 	// 走行機体プリセット
-	const [vehicleProp, setVehicleProp] = useState(PRESET_CARRIRO.size);
+	const [vehicleProp, setVehicleProp] = useState(PRESET_THOUZER.size);
 
 	// 剛体連結台車プリセット
 	const [rigidCartProp, setRigidCartProp] = useState(PRESET_RIGIDCART.size);
@@ -223,7 +224,7 @@ function Canvas({ command, client }) {
 			VehicleStartPosition.current.y * scale.current -
 			canvasCart.current.canvas.height / 2;
 		prevMousePoint.current = offset.current;
-		
+
 		drawGrid();
 		drawAllCarts();
 		drawCourse(); // コース描画
@@ -336,21 +337,49 @@ function Canvas({ command, client }) {
 		}
 	};
 
-	function createRoundRectPath(ctx, x, y, w, h, r) {
+	// function createRoundRectPath(ctx, x, y, w, h, r) {
+	// 	ctx.beginPath();
+	// 	ctx.moveTo(x + r, y);
+	// 	ctx.lineTo(x + w - r, y);
+	// 	ctx.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
+	// 	ctx.lineTo(x + w, y + h - r);
+	// 	ctx.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
+	// 	ctx.lineTo(x + r, y + h);
+	// 	ctx.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
+	// 	ctx.lineTo(x, y + r);
+	// 	ctx.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
+	// 	ctx.closePath();
+	// 	ctx.stroke();
+	// }
+
+	function createRoundRectPath(ctx, cobj) {
+		const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+		const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
+		const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
+		const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
+		const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
+		const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
+		const r = WorldToClientScale(100, scale.current);
+		const w = lf.x - lr.x
+		const h = rr.y - lr.y
+		const p = WorldToClientPosition(cobj.Position, scale.current, offset.current);
+		const s0 = new Point(100, -50)
+		const s1 = new Point(100, 50)
 		ctx.beginPath();
-		ctx.moveTo(x + r, y);
-		ctx.lineTo(x + w - r, y);
-		ctx.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
-		ctx.lineTo(x + w, y + h - r);
-		ctx.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
-		ctx.lineTo(x + r, y + h);
-		ctx.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
-		ctx.lineTo(x, y + r);
-		ctx.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
+		ctx.moveTo(lr.x, lr.y);
+		ctx.lineTo(rr.x, rr.y);
+		// ctx.arc(rr.x + r, rr.y - r, r, Math.PI * (2 / 2), false);
+		ctx.lineTo(rf.x, rf.y);
+		// ctx.arc(rf.x  - r, rf.y - r, r, 0, Math.PI * (4 / 2), false);
+		ctx.lineTo(lf.x, lf.y);
+		// ctx.arc(lr.x + r, lr.y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
+		ctx.lineTo(lr.x, lr.y);
+		// ctx.arc(lr.x + r, lr.y + r, r, Math.PI, Math.PI * (3 / 2), false);
+
 		ctx.closePath();
 		ctx.stroke();
-	}
 
+	}
 	/**
 	 * 一台のカートを描画する
 	 * @param {*} cobj
@@ -359,17 +388,16 @@ function Canvas({ command, client }) {
 	 * @param {*} ctx
 	 */
 	const DrawCart = (cobj, color, width, ctx) => {
-		ctx.beginPath();
+		// createRoundRectPath(ctx, cobj);
+		// 角RのBOXうまくいかない・・
+
 		const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
 		const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
 		const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
 		const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
 		const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
 		const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
-
-		// createRoundRectPath(ctx, lr.x, lr.y, lf.x - lr.x, rr.y - lr.y, 5);
-		// この関数で、角Rにしたいが、回転を考慮しないとダメ
-
+		ctx.beginPath();
 		ctx.moveTo(lf.x, lf.y);
 		ctx.lineTo(rf.x, rf.y);
 		ctx.lineTo(rr.x, rr.y);
@@ -818,8 +846,7 @@ function Canvas({ command, client }) {
 				currentLandmarkId.current = -1;
 			}
 
-			speed.current =
-				(DriveLeftSpeed.current[block] + DriveRightSpeed.current[block]) / 2;
+			speed.current = (DriveLeftSpeed.current[block] + DriveRightSpeed.current[block]) / 2;
 			DriveTime.current[ActionBlock.current] -= TIME_SPAN;
 			simTime.current += TIME_SPAN;
 
@@ -1022,20 +1049,23 @@ function Canvas({ command, client }) {
 
 	const handleClickOpePointer = (e) => {
 		if (e) {
-			setExclusiveValue(e);
+			setExclusiveMarkValue(e);
 			IsMarkLayoutMode.current = true;
 			Modify.current = true;
 		} else {
-			setExclusiveValue("");
+			setExclusiveMarkValue("");
 			IsMarkLayoutMode.current = false;
 			Modify.current = true;
 		}
 		markType.current = OperationType[e];
 
 		if (IsMarkLayoutMode.current) {
+			LandMarkLayout.current.map(({ Fix }) => {
+				// マークが選びなおされている場合、Fix 値が false なので、それを取り除く
+				if (!Fix) LandMarkLayout.current.pop();
+			})
 			MarkSelectingId.current = LandMarkLayout.current.length;
 			LandMarkLayout.current.push(new CLandMark(markType.current, markPos.current, markAngle.current, false));
-
 			document.body.style.cursor = "pointer";
 		} else {
 			if (!LandMarkLayout.current[MarkSelectingId.current].Fix) {
@@ -1046,10 +1076,19 @@ function Canvas({ command, client }) {
 			updateCourseTextData();
 			drawCourse(); // コース再描画
 		}
+
 	};
 
 	const handleClickCourseLayout = (e) => {
-		IsCourseLayoutMode.current = !IsCourseLayoutMode.current;
+		if (e) {
+			setExclusiveCourseValue(e);
+			IsCourseLayoutMode.current = true;
+			Modify.current = true;
+		} else {
+			setExclusiveCourseValue("");
+			IsCourseLayoutMode.current = false;
+			Modify.current = true;
+		}
 
 		if (IsCourseLayoutMode.current) {
 			msdownWS.current = 0;
@@ -1177,8 +1216,8 @@ function Canvas({ command, client }) {
 
 	const OnResetButtonClick = () => {
 		if (!exec.current) {
-			initDraw();
 			resetSimulateParam();
+			initDraw();
 			updateCourseTextData();
 			OperationToDriveParam(AUTOSTART);
 			setBtnStartDisable(false);
@@ -1199,6 +1238,31 @@ function Canvas({ command, client }) {
 		cbScroll.current = !cbScroll.current;
 	};
 
+	const cancelOperation=()=>{
+		if (IsMarkLayoutMode.current && !IsMarkReLayoutMode.current) {
+			// 新規配置のとき
+			keyPressEsc.current = true;
+			handleClickOpePointer();
+		}
+		if (IsMarkReLayoutMode.current) {
+			// 修正のとき
+			keyPressEsc.current = true;
+			LandMarkLayout.current[MarkSelectingId.current].Fix = true;
+			drawCourse(); // コース再描画
+			IsMarkLayoutMode.current = false;
+			IsMarkReLayoutMode.current = false;
+		}
+		if (IsCourseLayoutMode.current || IsCourseReLayoutMode.current) {
+			keyPressEsc.current = true;
+			handleClickCourseLayout();
+		}
+		if (IsCartMovingMode.current) {
+			CVehicle.current.Calc(prevCartPos.current, prevCartDeg.current, scale.current, offset.current);
+			IsCartMovingMode.current = false;
+			IsCartSelecting.current = false;
+		}
+	}
+
 	const onKeyDown = (e) => {
 		if (e.shiftKey) {
 			document.body.style.cursor = "move";
@@ -1206,28 +1270,7 @@ function Canvas({ command, client }) {
 
 		if (e.keyCode == 27) {
 			// ESC key
-			if (IsMarkLayoutMode.current && !IsMarkReLayoutMode.current) {
-				// 新規配置のとき
-				keyPressEsc.current = true;
-				handleClickOpePointer();
-			}
-			if (IsMarkReLayoutMode.current) {
-				// 修正のとき
-				keyPressEsc.current = true;
-				LandMarkLayout.current[MarkSelectingId.current].Fix = true;
-				drawCourse(); // コース再描画
-				IsMarkLayoutMode.current = false;
-				IsMarkReLayoutMode.current = false;
-			}
-			if (IsCourseLayoutMode.current || IsCourseReLayoutMode.current) {
-				keyPressEsc.current = true;
-				handleClickCourseLayout();
-			}
-			if (IsCartMovingMode.current) {
-				CVehicle.current.Calc(prevCartPos.current, prevCartDeg.current, scale.current, offset.current);
-				IsCartMovingMode.current = false;
-				IsCartSelecting.current = false;
-			}
+			cancelOperation();
 		}
 
 		if (e.keyCode == 46) {
@@ -1446,7 +1489,7 @@ function Canvas({ command, client }) {
 		);
 
 		if (e.shiftKey) {
-			if (!cbTrace.current.checked && !cbScroll.current.checked) {
+			if (!cbTrace.current && !cbScroll.current) {
 				if (msdown.current) {
 					const pt = msDownS.current.SubPoint(onCanvasPos.current);
 					offset.current = prevMousePoint.current.AddPoint(pt);
@@ -1478,7 +1521,7 @@ function Canvas({ command, client }) {
 				e.clientY + 30
 			);
 		}
-		if (!IsMarkLayoutMode.current && !e.shiftKey) {
+		if (!IsMarkLayoutMode.current && !e.shiftKey && !IsCourseLayoutMode.current) {
 			IsMarkSelecting.current = false;
 			MarkSelectingId.current = -1;
 			let i = 0;
@@ -1505,9 +1548,9 @@ function Canvas({ command, client }) {
 			canvasCourse.current.ctx.setLineDash([2, 2]);
 			canvasCourse.current.ctx.beginPath();
 			canvasCourse.current.ctx.arc(
-				WorldToClientPositionX(coursePos.current.x,scale.current, offset.current),
-				WorldToClientPositionY(coursePos.current.y,scale.current, offset.current),
-				WorldToClientScale(100,scale.current, offset.current),
+				WorldToClientPositionX(coursePos.current.x, scale.current, offset.current),
+				WorldToClientPositionY(coursePos.current.y, scale.current, offset.current),
+				WorldToClientScale(100, scale.current, offset.current),
 				0,
 				2 * Math.PI,
 				true
@@ -1523,7 +1566,7 @@ function Canvas({ command, client }) {
 				e.clientY + 30
 			);
 		}
-		if (!IsCourseLayoutMode.current && !e.shiftKey) {
+		if (!IsCourseLayoutMode.current && !e.shiftKey && !IsMarkLayoutMode.current) {
 			IsCourseSelecting.current = false;
 			CourseSelectingId.current = -1;
 			CoursePosiesSelectingId.current = -1;
@@ -1546,10 +1589,10 @@ function Canvas({ command, client }) {
 			});
 		}
 
-		if (!IsCartMovingMode.current && !e.shiftKey) {
+		if (!IsCartMovingMode.current && !e.shiftKey && !IsCourseLayoutMode.current && !IsMarkLayoutMode.current) {
 			IsCartSelecting.current = false;
 			CartSelectingId.current = -1;
-			if (CVehicle.current.Selecting(canvasCart.current.ctx, mspos)) {
+			if (CVehicle.current.Selecting(canvasCart.current.ctx, mspos, scale.current, offset.current)) {
 				CartSelectingId.current = CVehicle.current.Id;
 				IsCartSelecting.current = true;
 			}
@@ -1571,22 +1614,22 @@ function Canvas({ command, client }) {
 		}
 
 		if (e.shiftKey) {
-			if (msdown.current && cbTrace.current.checked) {
+			if (msdown.current && cbTrace.current) {
 				canvasCourse.current.ctx.font = "12pt Arial";
 				canvasCourse.current.ctx.fillStyle = "rgb(96,96,128)";
 				canvasCourse.current.ctx.fillText(
 					"軌跡表示中は画面移動できません。",
-					e.clientX + 5 - canvasCart.current.canvas.offsetLeft,
-					e.clientY + 30
+					e.clientX + 10 - canvasCart.current.canvas.offsetLeft,
+					e.clientY + 30 - canvasCourse.current.canvas.offsetTop
 				);
 			}
-			if (msdown.current && cbScroll.current.checked) {
+			if (msdown.current && cbScroll.current) {
 				canvasCourse.current.ctx.font = "12pt Arial";
 				canvasCourse.current.ctx.fillStyle = "rgb(96,96,128)";
 				canvasCourse.current.ctx.fillText(
 					"スクロール中は画面移動できません。",
-					e.clientX + 5 - canvasCart.current.canvas.offsetLeft,
-					e.clientY + 30
+					e.clientX + 10 - canvasCart.current.canvas.offsetLeft,
+					e.clientY + 30 - canvasCourse.current.canvas.offsetTop
 				);
 			}
 		}
@@ -1937,7 +1980,7 @@ function Canvas({ command, client }) {
 										<Image
 											objectFit="none"
 											height={"220px"}
-											src="./CarriRoSize.png"
+											src="./vehicle_size.png"
 										></Image>
 									</Fieldset>
 									<Button isFullWidth onClick={() => setTab("1")}>
@@ -2113,42 +2156,48 @@ function Canvas({ command, client }) {
 										<Flex direction="row" gap="small">
 											<ToggleButtonGroup
 												size="small"
-												value={exclusiveValue}
+												value={exclusiveMarkValue}
 												isExclusive
 												onChange={(e) => handleClickOpePointer(e)}
 											>
 												<ToggleButton value="Forward1">
-													<Image src="./LandMark_Forward1.gif" />
+													<Image src="./F1.png" />
 												</ToggleButton>
 												<ToggleButton value="Forward2">
-													<Image src="./LandMark_Forward2.gif" />
+													<Image src="./F2.png" />
 												</ToggleButton>
 												<ToggleButton value="Forward3">
-													<Image src="./LandMark_Forward3.gif" />
+													<Image src="./F3.png" />
 												</ToggleButton>
 												<ToggleButton value="Curve_Left">
-													<Image src="./LandMark_Curve_Left.gif" />
+													<Image src="./CL.png" />
 												</ToggleButton>
 												<ToggleButton value="Curve_Right">
-													<Image src="./LandMark_Curve_Right.gif" />
+													<Image src="./CR.png" />
 												</ToggleButton>
 											</ToggleButtonGroup>
 										</Flex>
 									</Fieldset>
 									<Fieldset
-										legend="Layout wall"
+										legend="Layout Course"
 										direction="column"
 										marginBottom={20}
 									>
 										<Flex direction="row" gap="small">
 											<ToggleButtonGroup
 												size="small"
-												value={exclusiveValue}
+												value={exclusiveCourseValue}
 												isExclusive
 												onChange={(e) => handleClickCourseLayout(e)}
 											>
 												<ToggleButton value="wall">
-													wall
+													Wall
+												</ToggleButton>
+												<ToggleButton value="box">
+													Box
+												</ToggleButton>
+												<ToggleButton value="line">
+													Line
 												</ToggleButton>
 											</ToggleButtonGroup>
 										</Flex>
