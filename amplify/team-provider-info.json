@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-autorobotsimulator-dev-88872-authRole",
+      "UnauthRoleArn": "arn:aws:iam::478054654864:role/amplify-autorobotsimulator-dev-88872-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::478054654864:role/amplify-autorobotsimulator-dev-88872-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-autorobotsimulator-dev-88872-deployment",
+      "UnauthRoleName": "amplify-autorobotsimulator-dev-88872-unauthRole",
+      "StackName": "amplify-autorobotsimulator-dev-88872",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:478054654864:stack/amplify-autorobotsimulator-dev-88872/eab51180-8ce1-11ef-81fe-0631e24394d1",
+      "AmplifyAppId": "d3ifmmia6q92sc"
+    }
+  }
+}
