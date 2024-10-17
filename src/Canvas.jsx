@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as Styles from "./Styles";
 import {
-	Authenticator,
 	Flex,
 	Button,
 	TextAreaField,
@@ -48,11 +47,12 @@ import {
 import { CCart } from "./CCart";
 import { CLandMark } from "./CLandmark";
 import { CCourse } from "./CCourse";
-import { disable } from "aws-amplify/analytics";
 
 const DEBUG = true;
 
-function Canvas({ command, client }) {
+function Canvas({ command, client, user, signOut }) {
+	const { loginId } = user.signInDetails
+
 	const DEFAULT_SCALE = 0.1;
 	const CR = "\n";
 	const LANDMARK_IMAGE_SCALE = 0.5; // 元画像サイズに合わせた比率
@@ -1238,7 +1238,7 @@ function Canvas({ command, client }) {
 		cbScroll.current = !cbScroll.current;
 	};
 
-	const cancelOperation=()=>{
+	const cancelOperation = () => {
 		if (IsMarkLayoutMode.current && !IsMarkReLayoutMode.current) {
 			// 新規配置のとき
 			keyPressEsc.current = true;
@@ -1775,6 +1775,13 @@ function Canvas({ command, client }) {
 		updateCourseTextData();
 	};
 
+
+
+	const handleDebug = (e) => {
+		console.log('e🔵 ', e);
+
+	}
+
 	return (
 		<Grid
 			height="100%"
@@ -1786,7 +1793,11 @@ function Canvas({ command, client }) {
 			templateRows="60px 1fr 60px"
 		>
 			<Card columnStart="1" columnEnd="-1">
-				<h3>Autonomous Robot Simulator</h3>
+				<Flex>
+					<h3>Autonomous Robot Simulator</h3>
+					<h4>{loginId}</h4>
+					<Button onClick={signOut}>Sign Out</Button>
+				</Flex>
 			</Card>
 			<Card rowStart="2" rowEnd="-1">
 				<Tabs
@@ -1891,6 +1902,9 @@ function Canvas({ command, client }) {
 											value={operate}
 										/>
 									</label>
+									<Button isFullWidth onClick={(e) => handleDebug(e)}>
+										Debug
+									</Button>
 								</Flex>
 							),
 						},
@@ -1985,9 +1999,6 @@ function Canvas({ command, client }) {
 									</Fieldset>
 									<Button isFullWidth onClick={() => setTab("1")}>
 										Back to Simulate tab
-									</Button>
-									<Button isFullWidth onClick={() => console.log(vehicleProp)}>
-										show log
 									</Button>
 								</>
 							),

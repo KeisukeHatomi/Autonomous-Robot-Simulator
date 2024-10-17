@@ -3,6 +3,19 @@ import * as Styles from "./Styles";
 import Canvas from "./Canvas";
 import mqtt from "mqtt";
 
+import { Amplify } from "aws-amplify";
+import "@aws-amplify/ui-react/styles.css";
+import { Authenticator } from "@aws-amplify/ui-react";
+import { getUrl } from "aws-amplify/storage";
+import { uploadData } from "aws-amplify/storage";
+import { generateClient } from "aws-amplify/data";
+import outputs from "../amplify_outputs.json";
+
+Amplify.configure(outputs);
+const client = generateClient({
+  authMode: "userPool",
+});
+
 function App() {
   const [client, setClient] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -57,7 +70,13 @@ function App() {
   };
 
   return (
-      <Canvas command={subMessages} client={client} />
+    <Authenticator>
+      {({ signOut, user }) => (
+        <>
+          <Canvas command={subMessages} client={client} user={user} signOut={signOut}/>
+        </>
+      )}
+    </Authenticator>
   );
 }
 
