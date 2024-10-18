@@ -3,21 +3,27 @@ import * as Styles from "./Styles";
 import Canvas from "./Canvas";
 import mqtt from "mqtt";
 
-import { Amplify } from "aws-amplify";
 import "@aws-amplify/ui-react/styles.css";
 import { Authenticator } from "@aws-amplify/ui-react";
-import { getUrl } from "aws-amplify/storage";
-import { uploadData } from "aws-amplify/storage";
-import { generateClient } from "aws-amplify/data";
+import { Amplify } from "aws-amplify";
+
+import {
+  Button,
+  Text,
+  TextField,
+  Heading,
+  Flex,
+  View,
+  Image,
+  Grid,
+  Divider,
+} from "@aws-amplify/ui-react";
 import outputs from "../amplify_outputs.json";
 
 Amplify.configure(outputs);
-const client = generateClient({
-  authMode: "userPool",
-});
 
 function App() {
-  const [client, setClient] = useState(null);
+  const [clientMQTT, setClient] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [subMessages, setSubMessages] = useState(JSON.parse('{"x":1,"y":1}'));
   const [pubMessage, setPubMessage] = useState("");
@@ -63,8 +69,8 @@ function App() {
   }, []);
 
   const publishMessage = () => {
-    if (client && isConnected) {
-      client.publish("emqx/esp32", pubMessage);
+    if (clientMQTT && isConnected) {
+      clientMQTT.publish("emqx/esp32", pubMessage);
       setPubMessage("");
     }
   };
@@ -73,7 +79,7 @@ function App() {
     <Authenticator>
       {({ signOut, user }) => (
         <>
-          <Canvas command={subMessages} client={client} user={user} signOut={signOut}/>
+          <Canvas command={subMessages} client={clientMQTT} user={user} signOut={signOut} />
         </>
       )}
     </Authenticator>

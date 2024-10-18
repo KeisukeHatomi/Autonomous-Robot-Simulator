@@ -47,6 +47,7 @@ import {
 import { CCart } from "./CCart";
 import { CLandMark } from "./CLandmark";
 import { CCourse } from "./CCourse";
+import DataFile from "./DataFile";
 
 const DEBUG = true;
 
@@ -2220,11 +2221,12 @@ function Canvas({ command, client, user, signOut }) {
 							),
 						},
 						{
-							label: "Data",
+							label: "File",
 							value: "5",
 							content: (
 								<>
-									<p>Content of the second tab.</p>
+									<DataFile />
+
 									<Button isFullWidth onClick={() => setTab("1")}>
 										Back to Simulate tab
 									</Button>

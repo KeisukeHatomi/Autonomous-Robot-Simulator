@@ -27,6 +27,12 @@ export const inputLabel = {
   size: "small",
 };
 
+export const inputString = {
+  size: "small",
+  width: 200,
+  // textAlign: "right",
+};
+
 export const divBlock = {
   display: "grid",
   gridTtemplateRows: "1fr",

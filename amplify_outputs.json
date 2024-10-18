@@ -34,8 +34,8 @@
     "model_introspection": {
       "version": 1,
       "models": {
-        "Todo": {
-          "name": "Todo",
+        "Layout": {
+          "name": "Layout",
           "fields": {
             "id": {
               "name": "id",
@@ -53,6 +53,27 @@
             },
             "description": {
               "name": "description",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "vehicle": {
+              "name": "vehicle",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "cart": {
+              "name": "cart",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "course": {
+              "name": "course",
               "isArray": false,
               "type": "String",
               "isRequired": false,
@@ -83,7 +104,7 @@
             }
           },
           "syncable": true,
-          "pluralName": "Todos",
+          "pluralName": "Layouts",
           "attributes": [
             {
               "type": "model",
