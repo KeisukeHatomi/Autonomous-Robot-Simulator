@@ -142,15 +142,14 @@ function Canvas({ command, client, user, signOut }) {
 	const msdownWS = useRef(0)
 	const prevCoursePosies = useRef([])
 	const CourseType = useRef(0);
-
 	const [exclusiveMarkValue, setExclusiveMarkValue] = useState("");
 	const [exclusiveCourseValue, setExclusiveCourseValue] = useState("");
+	const layoutData = useRef("");
+
 	// 走行機体プリセット
 	const [vehicleProp, setVehicleProp] = useState(PRESET_THOUZER.size);
-
 	// 剛体連結台車プリセット
 	const [rigidCartProp, setRigidCartProp] = useState(PRESET_RIGIDCART.size);
-
 	// 牽引台車プリセット
 	const [towCartProp, setTowCartProp] = useState(PRESET_ROLLBOXCART1.size);
 
@@ -168,6 +167,12 @@ function Canvas({ command, client, user, signOut }) {
 		canvas: "",
 		ctx: "",
 	});
+
+	const DATATITLE_VEHICLE = "Vehicle";
+	const DATATITLE_RIGIDCART = "RigidCart";
+	const DATATITLE_TOWCART = "TowCart";
+	const DATATITLE_LANDMARK = "LandmarkLayout";
+	const DATATITLE_COURSE = "CourseLayout";
 
 	/**
 	 * 初期画面描画
@@ -912,9 +917,61 @@ function Canvas({ command, client, user, signOut }) {
 		return -1;
 	};
 
-	const updateCourseTextData = () => { };
+	const updateCourseTextData = () => {
 
-	const setVehicleProperty = () => { };
+		layoutData.current = {
+			[DATATITLE_VEHICLE]: {
+				"type": PRESET_THOUZER.type,
+				"StartPositionX": VehicleStartPosition.current.x,
+				"StartPositionY": VehicleStartPosition.current.y,
+				"StartDegree": VehicleStartDegree.current,
+				"width": vehicleProp.width,
+				"length": vehicleProp.length,
+				"rearend": vehicleProp.rearend,
+				"towpos": vehicleProp.towpos.x,
+				"linkpos": vehicleProp.linkpos.x,
+				"camerapos": vehicleProp.camerapos.x,
+				"tread": vehicleProp.tread,
+			},
+			[DATATITLE_RIGIDCART]: {
+				"connect": cbRigidCart,
+				"width": rigidCartProp.width,
+				"length": rigidCartProp.length,
+				"towpos": rigidCartProp.towpos.x,
+				"rearend": rigidCartProp.rearend,
+			},
+			[DATATITLE_TOWCART]: {
+				"connect": cbTowCart,
+				"qty": TowCartQty,
+				"width": towCartProp.width,
+				"length": towCartProp.length,
+				"towpos": towCartProp.towpos.x,
+				"rearend": towCartProp.rearend,
+				"tread": vehicleProp.tread,
+				"driviingpos": towCartProp.drivingpos.x
+			},
+			[DATATITLE_LANDMARK]: LandMarkLayout.current.map((e) => {
+				return {
+					"type": e.Type,
+					"positionX": e.Position.x,
+					"positionY": e.Position.y,
+					"angle": e.Angle,
+					"fix":e.Fix,
+				}
+			}),
+			[DATATITLE_COURSE]: CourseLayout.current.map((e)=>{
+				return {
+					"type": e.Type,
+					"positionX": e.Position.map((v)=>v.x),
+					"positionY": e.Position.map((v)=>v.y),
+					"fix": e.Fix,	
+				}
+			}),
+		}
+
+		// console.log('layoutData.current🔵 ', layoutData.current);
+	};
+
 
 	const resetSimulateParam = () => {
 		//変数初期化
@@ -1096,6 +1153,7 @@ function Canvas({ command, client, user, signOut }) {
 			coursePosies.current = [];
 			coursePosies.current.push(coursePos.current);
 			CourseLayout.current.push(new CCourse(CourseType.current, coursePosies.current, false));
+			// console.log('CourseLayout.current🔵 ', CourseLayout.current);
 			CourseSelectingId.current = CourseLayout.current.length - 1;
 			CoursePosiesSelectingId.current = coursePosies.current.length - 1;
 
@@ -2225,8 +2283,7 @@ function Canvas({ command, client, user, signOut }) {
 							value: "5",
 							content: (
 								<>
-									<DataFile />
-
+									<DataFile layoutData={layoutData.current}/>
 									<Button isFullWidth onClick={() => setTab("1")}>
 										Back to Simulate tab
 									</Button>

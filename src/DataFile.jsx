@@ -9,7 +9,7 @@ const client = generateClient({
     authMode: "userPool",
 });
 
-function DataFile() {
+function DataFile({layoutData}) {
     const [notes, setNotes] = useState([]);
     const [layoutName, setLayoutName] = useState("")
     const [layoutMemo, setLayoutMemo] = useState("")
@@ -36,13 +36,12 @@ function DataFile() {
 
     async function handleSave() {
         console.log('layoutName🔵 ', layoutName);
+
         if (layoutName) {
             const { data: newLayout } = await client.models.Layout.create({
                 name: layoutName,
                 description: layoutMemo,
-                vehicle: "",
-                cart: "",
-                course: "",
+                data: JSON.stringify(layoutData),
                 image: "",
             });
 

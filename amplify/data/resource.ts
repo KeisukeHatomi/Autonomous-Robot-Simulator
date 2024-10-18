@@ -11,9 +11,7 @@ const schema = a.schema({
     .model({
       name:a.string(),
       description: a.string(),
-      vehicle: a.string(),
-      cart: a.string(),
-      course: a.string(),
+      data: a.json(),
       image: a.string(),
     })
     .authorization((allow) => [allow.owner()]),

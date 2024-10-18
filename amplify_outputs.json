@@ -58,24 +58,10 @@
               "isRequired": false,
               "attributes": []
             },
-            "vehicle": {
-              "name": "vehicle",
+            "data": {
+              "name": "data",
               "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "cart": {
-              "name": "cart",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "course": {
-              "name": "course",
-              "isArray": false,
-              "type": "String",
+              "type": "AWSJSON",
               "isRequired": false,
               "attributes": []
             },
