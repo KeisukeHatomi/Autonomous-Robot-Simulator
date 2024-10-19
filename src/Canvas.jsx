@@ -52,6 +52,7 @@ import DataFile from "./DataFile";
 const DEBUG = true;
 
 function Canvas({ command, client, user, signOut }) {
+	console.log('🔵Canvas');
 	const { loginId } = user.signInDetails
 
 	const DEFAULT_SCALE = 0.1;
@@ -123,7 +124,7 @@ function Canvas({ command, client, user, signOut }) {
 	const [btnStartContent, setBtnStartContent] = useState("Start");
 	const currentLandmarkId = useRef(0);
 	const [cbRigidCart, setCbRigid] = useState(false);
-	const [cbTowCart, setCbTowCaart] = useState(false);
+	const [cbTowCart, setCbTowCart] = useState(false);
 	const [TowCartQty, setTowCartQty] = useState(1);
 	const [sliderSimSpeedDisable, setSliderSimSpeedDisable] = useState(false);
 	const [sliderTraceIntervalDisable, setSliderTraceIntervalDisable] =
@@ -167,6 +168,7 @@ function Canvas({ command, client, user, signOut }) {
 		canvas: "",
 		ctx: "",
 	});
+	const canvasAll = useRef();
 
 	const DATATITLE_VEHICLE = "Vehicle";
 	const DATATITLE_RIGIDCART = "RigidCart";
@@ -178,12 +180,14 @@ function Canvas({ command, client, user, signOut }) {
 	 * 初期画面描画
 	 */
 	const initDraw = () => {
+		console.log('🔵InitDraw');
 		clearCanvas(canvasCart.current);
 
 		offset.current = Point.Zero();
 		drawGrid();
 
 		id.current = 0;
+
 		// 走行機体生成
 		CVehicle.current = new CCart(vehicleProp, id.current);
 		CVehicle.current.Calc(
@@ -917,7 +921,8 @@ function Canvas({ command, client, user, signOut }) {
 		return -1;
 	};
 
-	const updateCourseTextData = () => {
+	const updateFileData = () => {
+		console.log('🔵UpdateTextData');
 
 		layoutData.current = {
 			[DATATITLE_VEHICLE]: {
@@ -925,46 +930,30 @@ function Canvas({ command, client, user, signOut }) {
 				"StartPositionX": VehicleStartPosition.current.x,
 				"StartPositionY": VehicleStartPosition.current.y,
 				"StartDegree": VehicleStartDegree.current,
-				"width": vehicleProp.width,
-				"length": vehicleProp.length,
-				"rearend": vehicleProp.rearend,
-				"towpos": vehicleProp.towpos.x,
-				"linkpos": vehicleProp.linkpos.x,
-				"camerapos": vehicleProp.camerapos.x,
-				"tread": vehicleProp.tread,
+				"size": vehicleProp,
 			},
 			[DATATITLE_RIGIDCART]: {
 				"connect": cbRigidCart,
-				"width": rigidCartProp.width,
-				"length": rigidCartProp.length,
-				"towpos": rigidCartProp.towpos.x,
-				"rearend": rigidCartProp.rearend,
+				"size": rigidCartProp,
 			},
 			[DATATITLE_TOWCART]: {
 				"connect": cbTowCart,
 				"qty": TowCartQty,
-				"width": towCartProp.width,
-				"length": towCartProp.length,
-				"towpos": towCartProp.towpos.x,
-				"rearend": towCartProp.rearend,
-				"tread": vehicleProp.tread,
-				"driviingpos": towCartProp.drivingpos.x
+				"size": towCartProp,
 			},
 			[DATATITLE_LANDMARK]: LandMarkLayout.current.map((e) => {
 				return {
 					"type": e.Type,
-					"positionX": e.Position.x,
-					"positionY": e.Position.y,
+					"position": e.Position,
 					"angle": e.Angle,
-					"fix":e.Fix,
+					"fix": e.Fix,
 				}
 			}),
-			[DATATITLE_COURSE]: CourseLayout.current.map((e)=>{
+			[DATATITLE_COURSE]: CourseLayout.current.map((e) => {
 				return {
 					"type": e.Type,
-					"positionX": e.Position.map((v)=>v.x),
-					"positionY": e.Position.map((v)=>v.y),
-					"fix": e.Fix,	
+					"position": e.Position.map((v) => v),
+					"fix": e.Fix,
 				}
 			}),
 		}
@@ -974,6 +963,7 @@ function Canvas({ command, client, user, signOut }) {
 
 
 	const resetSimulateParam = () => {
+		console.log('🔵ResetSimulateParam');
 		//変数初期化
 		simTime.current = START_TIME;
 		exec.current = false;
@@ -1031,6 +1021,9 @@ function Canvas({ command, client, user, signOut }) {
 		canvasCourse.current.canvas = document.getElementById("courseCanvas");
 		canvasCourse.current.ctx = canvasCourse.current.canvas.getContext("2d");
 
+		canvasAll.current = document.getElementById("canvasAreaCard");
+
+
 		document.addEventListener("keydown", onKeyDown);
 		document.addEventListener("keyup", onKeyUp);
 
@@ -1054,7 +1047,9 @@ function Canvas({ command, client, user, signOut }) {
 	}, []);
 
 	useEffect(() => {
+		console.log('🔵useEffect2');
 		OnResetButtonClick();
+		// updateCourseTextData();
 	}, [
 		cbRigidCart,
 		cbTowCart,
@@ -1106,6 +1101,7 @@ function Canvas({ command, client, user, signOut }) {
 	}, [command]);
 
 	const handleClickOpePointer = (e) => {
+		console.log('🔵handleClickOpePointer');
 		if (e) {
 			setExclusiveMarkValue(e);
 			IsMarkLayoutMode.current = true;
@@ -1131,13 +1127,14 @@ function Canvas({ command, client, user, signOut }) {
 			}
 			document.body.style.cursor = "auto";
 
-			updateCourseTextData();
+			updateFileData();
 			drawCourse(); // コース再描画
 		}
 
 	};
 
 	const handleClickCourseLayout = (e) => {
+		console.log('🔵handleClickCourseLayout');
 		if (e) {
 			setExclusiveCourseValue(e);
 			IsCourseLayoutMode.current = true;
@@ -1174,7 +1171,7 @@ function Canvas({ command, client, user, signOut }) {
 			document.body.style.cursor = "auto";
 		}
 
-		updateCourseTextData();
+		updateFileData();
 		drawCourse(); // コース再描画
 	}
 
@@ -1184,6 +1181,7 @@ function Canvas({ command, client, user, signOut }) {
 			...prevVehicleProp,
 			[name]: value,
 		}));
+		updateFileData();
 	};
 
 	const handleInputVehiclePropPoint = (e) => {
@@ -1192,6 +1190,7 @@ function Canvas({ command, client, user, signOut }) {
 			...prevVehicleProp,
 			[name]: new Point(value, 0),
 		}));
+		updateFileData();
 	};
 
 	const handleInputRigidCartPropNum = (e) => {
@@ -1200,6 +1199,7 @@ function Canvas({ command, client, user, signOut }) {
 			...prevRigidCartProp,
 			[name]: value,
 		}));
+		updateFileData();
 	};
 
 	const handleInputRigidCartPropPoint = (e) => {
@@ -1208,6 +1208,7 @@ function Canvas({ command, client, user, signOut }) {
 			...prevRigidCartProp,
 			[name]: new Point(value, 0),
 		}));
+		updateFileData();
 	};
 
 	const handleInputTowCartPropNum = (e) => {
@@ -1216,6 +1217,7 @@ function Canvas({ command, client, user, signOut }) {
 			...prevTowCartProp,
 			[name]: value,
 		}));
+		updateFileData();
 	};
 
 	const handleInputTowCartPropPoint = (e) => {
@@ -1224,17 +1226,19 @@ function Canvas({ command, client, user, signOut }) {
 			...prevTowCartProp,
 			[name]: new Point(value, 0),
 		}));
+		updateFileData();
 	};
 
 	const handleChangeTow = (e) => {
 		if (exec.current) {
 			OnStartStopButtonClick();
 		}
-		setCbTowCaart(e.target.checked);
+		setCbTowCart(e.target.checked);
 
 		if (e.target.checked) {
 			setTowCartQty(TowCartQty);
 		}
+		updateFileData();
 	};
 
 	const handleCangeTowCartQty = (value) => {
@@ -1242,6 +1246,7 @@ function Canvas({ command, client, user, signOut }) {
 			OnStartStopButtonClick();
 		}
 		setTowCartQty(value);
+		updateFileData();
 	};
 
 	const handleChangeRidgid = (e) => {
@@ -1249,6 +1254,7 @@ function Canvas({ command, client, user, signOut }) {
 			OnStartStopButtonClick();
 		}
 		setCbRigid(e.target.checked);
+		updateFileData();
 	};
 
 	const formatValue = (value) => {
@@ -1275,9 +1281,10 @@ function Canvas({ command, client, user, signOut }) {
 
 	const OnResetButtonClick = () => {
 		if (!exec.current) {
+			console.log('🔵OnReset',);
 			resetSimulateParam();
 			initDraw();
-			updateCourseTextData();
+			updateFileData();
 			OperationToDriveParam(AUTOSTART);
 			setBtnStartDisable(false);
 		}
@@ -1323,6 +1330,7 @@ function Canvas({ command, client, user, signOut }) {
 	}
 
 	const onKeyDown = (e) => {
+		console.log('🔵KeyDown');
 		if (e.shiftKey) {
 			document.body.style.cursor = "move";
 		}
@@ -1359,10 +1367,11 @@ function Canvas({ command, client, user, signOut }) {
 			}
 		}
 
-		updateCourseTextData();
+		updateFileData();
 	}
 
 	const onKeyUp = (e) => {
+		console.log('🔵KeyUp');
 		if (!e.shiftKey) {
 			if (IsMarkLayoutMode.current || IsCourseLayoutMode.current) {
 				document.body.style.cursor = "pointer";
@@ -1375,11 +1384,12 @@ function Canvas({ command, client, user, signOut }) {
 			keyPressEsc.current = false;
 		}
 
-		updateCourseTextData();
+		// updateCourseTextData();
 	}
 
 
 	const handleMouseDown = (e) => {
+		console.log('🔵MouseDown');
 		// The left button was pressed
 		if (e.button == 0) {
 			const rect = canvasCart.current.canvas.getBoundingClientRect();
@@ -1478,11 +1488,12 @@ function Canvas({ command, client, user, signOut }) {
 			}
 
 			drawCourse();
-			updateCourseTextData();
+			updateFileData();
 		}
 	};
 
 	const handleMouseUp = (e) => {
+		console.log('🔵MouseUp');
 		msdown.current = false;
 		prevMousePoint.current = offset.current;
 
@@ -1535,10 +1546,11 @@ function Canvas({ command, client, user, signOut }) {
 				drawAllCarts();
 			}
 		}
-		updateCourseTextData();
+		updateFileData();
 	};
 
 	const handleMouseMove = (e) => {
+		console.log('🔵MouseMove');
 		const rect = canvasCart.current.canvas.getBoundingClientRect();
 		onCanvasPos.current = new Point(e.clientX - rect.x, e.clientY - rect.y);
 		const mspos = ClientToWorldPosition(
@@ -1720,13 +1732,14 @@ function Canvas({ command, client, user, signOut }) {
 			measuring.current = false;
 		}
 
-		updateCourseTextData();
+		updateFileData();
 	};
 
 	const handleMouseWheel = (e) => {
 		// e.preventDefault();
 		// 次のエラーが出るため、回避策を要検討
 		// Unable to preventDefault inside passive event listener invocation.
+		console.log('🔵MouseWheel');
 
 		let rect = canvasCart.current.canvas.getBoundingClientRect();
 		onCanvasPos.current = new Point(e.clientX - rect.x, e.clientY - rect.y);
@@ -1831,14 +1844,57 @@ function Canvas({ command, client, user, signOut }) {
 			}
 		}
 
-		updateCourseTextData();
+		updateFileData();
 	};
-
-
 
 	const handleDebug = (e) => {
 		console.log('e🔵 ', e);
 
+	}
+
+	const handleLayoutChange = (newLayoutJsonText) => {
+		console.log('🔵handleLayoutChange');
+		const newLayout = JSON.parse(newLayoutJsonText);
+		console.log('newLayout🔵 ', newLayout);
+
+		VehicleStartPosition.current.x = newLayout.Vehicle.StartPositionX;
+		VehicleStartPosition.current.y = newLayout.Vehicle.StartPositionY;
+		VehicleStartDegree.current = newLayout.Vehicle.StartDegree;
+
+		ImageVehicle.src = newLayout.Vehicle.Type;
+		const newVehicleProp = newLayout.Vehicle.size;
+		setVehicleProp(newVehicleProp);
+
+		setCbRigid(newLayout.RigidCart.connect);
+		const newRigidCartProp = newLayout.RigidCart.size;
+		setRigidCartProp(newRigidCartProp);
+
+		setCbTowCart(newLayout.TowCart.connect);
+		setTowCartQty(newLayout.TowCart.qty);
+		const newTowCartProp = newLayout.TowCart.size;
+		setTowCartProp(newTowCartProp);
+
+		LandMarkLayout.current = [];
+		newLayout.LandmarkLayout.map((e) => {
+			LandMarkLayout.current.push(
+				new CLandMark(
+					e.type,
+					new Point(e.position.x, e.position.y),
+					e.angle,
+					e.fix
+				));
+		});
+
+		CourseLayout.current = [];
+		newLayout.CourseLayout.map((e) => {
+			CourseLayout.current.push(
+				new CCourse(
+					e.type,
+					e.position.map((p) => new Point(p.x, p.y)),
+					e.fix
+				)
+			)
+		});
 	}
 
 	return (
@@ -1989,7 +2045,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Wt"
 													name="width"
-													defaultValue={vehicleProp.width}
+													value={vehicleProp.width}
 													onInput={(e) => handleInputVehiclePropNum(e)}
 												></TextField>
 											</Flex>
@@ -1998,7 +2054,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Lt"
 													name="length"
-													defaultValue={vehicleProp.length}
+													value={vehicleProp.length}
 													onInput={(e) => handleInputVehiclePropNum(e)}
 												></TextField>
 											</Flex>
@@ -2007,7 +2063,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Td"
 													name="tread"
-													defaultValue={vehicleProp.tread}
+													value={vehicleProp.tread}
 													onInput={(e) => handleInputVehiclePropNum(e)}
 												></TextField>
 											</Flex>
@@ -2016,7 +2072,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Re"
 													name="rearend"
-													defaultValue={vehicleProp.rearend}
+													value={vehicleProp.rearend}
 													onInput={(e) => handleInputVehiclePropNum(e)}
 												></TextField>
 											</Flex>
@@ -2027,7 +2083,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Tw"
 													name="towpos"
-													defaultValue={vehicleProp.towpos.x}
+													value={vehicleProp.towpos.x}
 													onInput={(e) => handleInputVehiclePropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2036,7 +2092,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Lk"
 													name="linkpos"
-													defaultValue={vehicleProp.linkpos.x}
+													value={vehicleProp.linkpos.x}
 													onInput={(e) => handleInputVehiclePropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2045,7 +2101,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Cm"
 													name="camerapos"
-													defaultValue={vehicleProp.camerapos.x}
+													value={vehicleProp.camerapos.x}
 													onInput={(e) => handleInputVehiclePropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2075,7 +2131,7 @@ function Canvas({ command, client, user, signOut }) {
 										<CheckboxField
 											label="Rigidly connect the carts"
 											name="cb_ridgid"
-											defaultChecked={cbRigidCart}
+											checked={cbRigidCart}
 											onChange={(e) => handleChangeRidgid(e)}
 										/>
 										<Flex direction="row" gap="small">
@@ -2084,7 +2140,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Wt"
 													name="width"
-													defaultValue={rigidCartProp.width}
+													value={rigidCartProp.width}
 													onInput={(e) => handleInputRigidCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2093,7 +2149,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Lt"
 													name="length"
-													defaultValue={rigidCartProp.length}
+													value={rigidCartProp.length}
 													onInput={(e) => handleInputRigidCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2102,7 +2158,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Tw"
 													name="towpos"
-													defaultValue={rigidCartProp.towpos.x}
+													value={rigidCartProp.towpos.x}
 													onInput={(e) => handleInputRigidCartPropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2111,7 +2167,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Re"
 													name="rearend"
-													defaultValue={rigidCartProp.rearend}
+													value={rigidCartProp.rearend}
 													onInput={(e) => handleInputRigidCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2131,7 +2187,7 @@ function Canvas({ command, client, user, signOut }) {
 											<CheckboxField
 												label="Connect Towing dolley"
 												name="cb_tow"
-												defaultChecked={cbTowCart}
+												checked={cbTowCart}
 												onChange={(e) => handleChangeTow(e)}
 											/>
 											<StepperField
@@ -2150,7 +2206,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Wt"
 													name="width"
-													defaultValue={towCartProp.width}
+													value={towCartProp.width}
 													onInput={(e) => handleInputTowCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2159,7 +2215,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Lt"
 													name="length"
-													defaultValue={towCartProp.length}
+													value={towCartProp.length}
 													onInput={(e) => handleInputTowCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2168,7 +2224,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Tw"
 													name="towpos"
-													defaultValue={towCartProp.towpos.x}
+													value={towCartProp.towpos.x}
 													onInput={(e) => handleInputTowCartPropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2177,7 +2233,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Re"
 													name="rearend"
-													defaultValue={towCartProp.rearend}
+													value={towCartProp.rearend}
 													onInput={(e) => handleInputTowCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2186,7 +2242,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Td"
 													name="tread"
-													defaultValue={towCartProp.tread}
+													value={towCartProp.tread}
 													onInput={(e) => handleInputTowCartPropNum(e)}
 												></TextField>
 											</Flex>
@@ -2195,7 +2251,7 @@ function Canvas({ command, client, user, signOut }) {
 													{...Styles.inputNumber}
 													descriptiveText="Dp"
 													name="drivingpos"
-													defaultValue={towCartProp.drivingpos.x}
+													value={towCartProp.drivingpos.x}
 													onInput={(e) => handleInputTowCartPropPoint(e)}
 												></TextField>
 											</Flex>
@@ -2283,7 +2339,11 @@ function Canvas({ command, client, user, signOut }) {
 							value: "5",
 							content: (
 								<>
-									<DataFile layoutData={layoutData.current}/>
+									<DataFile
+										layoutData={layoutData.current}
+										canvas={canvasAll.current}
+										onLayoutChange={handleLayoutChange}
+									/>
 									<Button isFullWidth onClick={() => setTab("1")}>
 										Back to Simulate tab
 									</Button>
