@@ -347,48 +347,55 @@ function Canvas({ command, client, user, signOut }) {
 		}
 	};
 
-	// function createRoundRectPath(ctx, x, y, w, h, r) {
-	// 	ctx.beginPath();
-	// 	ctx.moveTo(x + r, y);
-	// 	ctx.lineTo(x + w - r, y);
-	// 	ctx.arc(x + w - r, y + r, r, Math.PI * (3 / 2), 0, false);
-	// 	ctx.lineTo(x + w, y + h - r);
-	// 	ctx.arc(x + w - r, y + h - r, r, 0, Math.PI * (1 / 2), false);
-	// 	ctx.lineTo(x + r, y + h);
-	// 	ctx.arc(x + r, y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
-	// 	ctx.lineTo(x, y + r);
-	// 	ctx.arc(x + r, y + r, r, Math.PI, Math.PI * (3 / 2), false);
-	// 	ctx.closePath();
-	// 	ctx.stroke();
-	// }
 
-	function createRoundRectPath(ctx, cobj) {
-		const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
-		const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
-		const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
-		const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
-		const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
-		const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
-		const r = WorldToClientScale(100, scale.current);
-		const w = lf.x - lr.x
-		const h = rr.y - lr.y
-		const p = WorldToClientPosition(cobj.Position, scale.current, offset.current);
-		const s0 = new Point(100, -50)
-		const s1 = new Point(100, 50)
-		ctx.beginPath();
-		ctx.moveTo(lr.x, lr.y);
-		ctx.lineTo(rr.x, rr.y);
-		// ctx.arc(rr.x + r, rr.y - r, r, Math.PI * (2 / 2), false);
-		ctx.lineTo(rf.x, rf.y);
-		// ctx.arc(rf.x  - r, rf.y - r, r, 0, Math.PI * (4 / 2), false);
-		ctx.lineTo(lf.x, lf.y);
-		// ctx.arc(lr.x + r, lr.y + h - r, r, Math.PI * (1 / 2), Math.PI, false);
-		ctx.lineTo(lr.x, lr.y);
-		// ctx.arc(lr.x + r, lr.y + r, r, Math.PI, Math.PI * (3 / 2), false);
+	//
+	/**
+	 * 任意の位置に回転・スケールされた角Rのついた矩形を描く関数
+	 * （カートの前方が右側に描く）
+	 * @param {*} ctx 対象キャンバス
+	 * @param {*} px 指定位置X
+	 * @param {*} py 指定位置Y
+	 * @param {*} length カートの長さ
+	 * @param {*} width カート幅
+	 * @param {*} rearEnd カート基準（drivingPosまたはLinkPos）からカート後端位置
+	 * @param {*} radius 四隅の角R
+	 * @param {*} angle カートの角度
+	 * @param {*} scale 表示拡縮
+	 */
+	function drawCartOutline(ctx, px, py, length, width, rearEnd, radius, angle, scale) {
+		ctx.save(); // 現在の状態を保存
 
-		ctx.closePath();
-		ctx.stroke();
+		// 座標移動、回転、スケーリング
+		ctx.translate(px, py);
+		ctx.rotate(angle * Math.PI / 180);  // 角度をラジアンに変換
+		ctx.scale(scale, scale);  // スケール適用
 
+		/**
+		 * 角R矩形を描画
+		 * @param {*} rx 左上X位置
+		 * @param {*} ry 左上Y位置
+		 * @param {*} rw 幅
+		 * @param {*} rh 高さ
+		 * @param {*} rd 角R
+		 */
+		const drawRoundedRect = (rx, ry, rw, rh, rd) => {
+			ctx.beginPath();
+			ctx.moveTo(rx + rd, ry);
+			ctx.lineTo(rx + rw - rd, ry);
+			ctx.arcTo(rx + rw, ry, rx + rw, ry + rd, rd);
+			ctx.lineTo(rx + rw, ry + rh - rd);
+			ctx.arcTo(rx + rw, ry + rh, rx + rw - rd, ry + rh, rd);
+			ctx.lineTo(rx + rd, ry + rh);
+			ctx.arcTo(rx, ry + rh, rx, ry + rh - rd, rd);
+			ctx.lineTo(rx, ry + rd);
+			ctx.arcTo(rx, ry, rx + rd, ry, rd);
+			ctx.closePath();
+		}
+
+		// 矩形を描画
+		drawRoundedRect(rearEnd, -width / 2, length, width, radius);
+
+		ctx.restore(); // 状態を元に戻す
 	}
 	/**
 	 * 一台のカートを描画する
@@ -398,21 +405,22 @@ function Canvas({ command, client, user, signOut }) {
 	 * @param {*} ctx
 	 */
 	const DrawCart = (cobj, color, width, ctx) => {
-		// createRoundRectPath(ctx, cobj);
-		// 角RのBOXうまくいかない・・
 
 		const lp = WorldToClientPosition(cobj.Position, scale.current, offset.current);
 		const fp = WorldToClientPosition(cobj.FrontPos, scale.current, offset.current);
-		const lf = WorldToClientPosition(cobj.LeftFront, scale.current, offset.current);
-		const rf = WorldToClientPosition(cobj.RightFront, scale.current, offset.current);
-		const rr = WorldToClientPosition(cobj.RightRear, scale.current, offset.current);
-		const lr = WorldToClientPosition(cobj.LeftRear, scale.current, offset.current);
-		ctx.beginPath();
-		ctx.moveTo(lf.x, lf.y);
-		ctx.lineTo(rf.x, rf.y);
-		ctx.lineTo(rr.x, rr.y);
-		ctx.lineTo(lr.x, lr.y);
-		ctx.closePath();
+
+		drawCartOutline(
+			ctx,
+			lp.x,
+			lp.y ,
+			cobj.Length,
+			cobj.Width,
+			cobj._RearEnd,
+			50,
+			-cobj.Degree,
+			scale.current,
+			scale.current
+		)
 
 		if (cobj.IsTowingCart) {
 			// 牽引バーがある場合
